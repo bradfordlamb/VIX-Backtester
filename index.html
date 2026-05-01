@@ -428,6 +428,11 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
             <option value="15" selected>Below 15</option>
             <option value="16">Below 16</option>
             <option value="17">Below 17</option>
+            <option value="18">Below 18</option>
+            <option value="19">Below 19</option>
+            <option value="20">Below 20</option>
+            <option value="22">Below 22</option>
+            <option value="25">Below 25</option>
             <option value="custom">Custom</option>
           </select>
         </div>
@@ -454,6 +459,9 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
             <option value="35">35</option>
             <option value="40" selected>40</option>
             <option value="45">45</option>
+            <option value="50">50</option>
+            <option value="55">55</option>
+            <option value="60">60</option>
             <option value="custom">Custom</option>
           </select>
         </div>
@@ -466,9 +474,11 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
           <label>Expiration (Days)</label>
           <select id="expiration">
             <option value="30">30 days</option>
+            <option value="45">45 days</option>
             <option value="60">60 days</option>
             <option value="90">90 days</option>
             <option value="120">120 days</option>
+            <option value="150">150 days</option>
             <option value="180" selected>180 days</option>
             <option value="270">270 days</option>
             <option value="365">365 days</option>
@@ -478,11 +488,15 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
         <div class="field">
           <label>Exit Rule</label>
           <select id="exitRule">
+            <option value="vix18">Sell when VIX ≥ 18</option>
             <option value="vix20">Sell when VIX ≥ 20</option>
+            <option value="vix22">Sell when VIX ≥ 22</option>
             <option value="vix25">Sell when VIX ≥ 25</option>
+            <option value="vix28">Sell when VIX ≥ 28</option>
             <option value="vix30" selected>Sell when VIX ≥ 30</option>
             <option value="vix35">Sell when VIX ≥ 35</option>
             <option value="vix40">Sell when VIX ≥ 40</option>
+            <option value="vix45">Sell when VIX ≥ 45</option>
             <option value="expiry">Hold to Expiration</option>
           </select>
         </div>
@@ -513,10 +527,68 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
           <input type="number" id="riskPerTrade" value="1000" min="100" max="100000" step="100">
         </div>
 
-        <div class="field">
-          <label>Implied Volatility Override (%)</label>
-          <input type="number" id="ivOverride" value="80" min="20" max="200" step="5">
-          <span style="font-size:10px;color:var(--text3)">Used for BS pricing (VIX fwd IV ≈ 70–100%)</span>
+        <!-- ── REALISTIC PRICING PANEL ── -->
+        <div style="border-top:1px solid var(--border);margin:4px 0;padding-top:10px">
+          <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:8px">⚡ Realistic Pricing</div>
+
+          <div class="field">
+            <label>VIX Futures Basis (pts above spot)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="futuresBasis" min="0" max="10" step="0.5" value="4"
+                style="flex:1;accent-color:var(--accent)" oninput="document.getElementById('futuresBasisVal').textContent=this.value">
+              <span id="futuresBasisVal" style="color:var(--accent);font-size:12px;min-width:28px">4.0</span>
+            </div>
+            <span style="font-size:10px;color:var(--text3)">VIX futures trade ~3–6pts above spot in contango. Options price off futures, not spot.</span>
+          </div>
+
+          <div class="field">
+            <label>Entry: Buy at Ask (spread % of mid)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="askSpread" min="0" max="100" step="5" value="50"
+                style="flex:1;accent-color:var(--green)" oninput="document.getElementById('askSpreadVal').textContent=this.value+'%'">
+              <span id="askSpreadVal" style="color:var(--green);font-size:12px;min-width:34px">50%</span>
+            </div>
+            <span style="font-size:10px;color:var(--text3)">You buy at ask = mid + (spread/2). Deep OTM VIX calls typically have 40–80% spreads.</span>
+          </div>
+
+          <div class="field">
+            <label>Exit: Sell at Bid (spread % of mid)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="bidSpread" min="0" max="100" step="5" value="50"
+                style="flex:1;accent-color:var(--red)" oninput="document.getElementById('bidSpreadVal').textContent=this.value+'%'">
+              <span id="bidSpreadVal" style="color:var(--red);font-size:12px;min-width:34px">50%</span>
+            </div>
+            <span style="font-size:10px;color:var(--text3)">You sell at bid = mid − (spread/2). During spikes spreads often widen to 60–100%.</span>
+          </div>
+
+          <div class="field">
+            <label>Implied Volatility — Entry (%)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="ivEntry" min="40" max="200" step="5" value="85"
+                style="flex:1;accent-color:var(--purple)" oninput="document.getElementById('ivEntryVal').textContent=this.value+'%'">
+              <span id="ivEntryVal" style="color:var(--purple);font-size:12px;min-width:34px">85%</span>
+            </div>
+            <span style="font-size:10px;color:var(--text3)">IV when buying. Deep OTM VIX calls typically 70–120% IV at entry.</span>
+          </div>
+
+          <div class="field">
+            <label>Implied Volatility — Exit spike (%)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="ivExit" min="60" max="300" step="5" value="150"
+                style="flex:1;accent-color:var(--amber)" oninput="document.getElementById('ivExitVal').textContent=this.value+'%'">
+              <span id="ivExitVal" style="color:var(--amber);font-size:12px;min-width:34px">150%</span>
+            </div>
+            <span style="font-size:10px;color:var(--text3)">IV during a VIX spike (when selling). Typically 120–250% during panic.</span>
+          </div>
+
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('optimistic')">Optimistic</button>
+            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('realistic')">Realistic</button>
+            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('conservative')">Conservative</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5">
+            Optimistic: no basis, tight spreads &nbsp;|&nbsp; Realistic: 4pt basis, 50% spread &nbsp;|&nbsp; Conservative: 6pt basis, 80% spread
+          </div>
         </div>
 
         <button class="btn btn-primary btn-full" onclick="runBacktest()">▶ RUN BACKTEST</button>
@@ -529,8 +601,8 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
 
     <!-- Legend -->
     <div class="note" style="font-size:10px;padding:12px">
-      <strong style="color:var(--accent)">Pricing Model Note</strong><br>
-      VIX options are priced off VIX futures, not spot VIX. This tool uses Black-Scholes on spot VIX as an approximation. Real backtesting requires historical option chain data.
+      <strong style="color:var(--amber)">⚠ Pricing Model</strong><br>
+      Options priced via Black-Scholes on the <em>futures-adjusted</em> VIX (spot + basis). Entry at ask, exit at bid. IV rises dynamically during spikes. Still approximate — use real option chain data for live trading.
     </div>
   </aside>
 
@@ -576,15 +648,16 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
               <thead><tr>
                 <th>#</th>
                 <th onclick="sortTable(1)">Entry Date ↕</th>
-                <th onclick="sortTable(2)">Entry VIX ↕</th>
+                <th onclick="sortTable(2)">Spot VIX</th>
+                <th>Fwd (Fut)</th>
                 <th>Strike</th>
-                <th>Expiry Date</th>
-                <th onclick="sortTable(5)">Entry Price ↕</th>
-                <th onclick="sortTable(6)">Exit Date ↕</th>
+                <th>Mid</th>
+                <th onclick="sortTable(6)">Entry Ask ↕</th>
+                <th onclick="sortTable(7)">Exit Date ↕</th>
                 <th>Exit VIX</th>
-                <th onclick="sortTable(8)">Exit Price ↕</th>
-                <th onclick="sortTable(9)">Return % ↕</th>
-                <th>Days Held</th>
+                <th onclick="sortTable(9)">Exit Bid ↕</th>
+                <th onclick="sortTable(10)">Return % ↕</th>
+                <th>Days</th>
                 <th>Exit Reason</th>
               </tr></thead>
               <tbody id="tradeBody"></tbody>
@@ -772,7 +845,11 @@ document.getElementById('vixFile').addEventListener('change', function (e) {
     try {
       vixData = parseVixCSV(evt.target.result);
       if (vixData.length < 10) throw new Error('Too few rows');
-      showStatus('vixStatus', `✓ Loaded ${vixData.length} rows from ${file.name}`, 'ok');
+      const closeOnly = vixData.some(r => r.closeOnly);
+      const msg = closeOnly
+        ? `✓ Loaded ${vixData.length} rows from ${file.name} — close-only data (no intraday highs). Exit signals trigger on daily closes only.`
+        : `✓ Loaded ${vixData.length} rows from ${file.name} (${vixData[0].date} → ${vixData[vixData.length-1].date})`;
+      showStatus('vixStatus', msg, 'ok');
     } catch (err) {
       showStatus('vixStatus', `✗ Parse error: ${err.message}`, 'err');
     }
@@ -783,24 +860,27 @@ document.getElementById('vixFile').addEventListener('change', function (e) {
 function parseVixCSV(text) {
   const lines = text.trim().split('\n');
   const header = lines[0].toLowerCase().replace(/\r/g, '').split(',').map(s => s.trim().replace(/"/g, ''));
-  const di = findCol(header, ['date', 'dt', 'time', 'timestamp']);
+  const di = findCol(header, ['date', 'dt', 'time', 'timestamp', 'observation_date']);
   const oi = findCol(header, ['open', 'o']);
   const hi = findCol(header, ['high', 'h']);
   const li = findCol(header, ['low', 'l']);
-  const ci = findCol(header, ['close', 'c', 'adj close', 'adjclose']);
-  if (di < 0 || ci < 0) throw new Error('Cannot find Date or Close column');
+  // FRED VIXCLS format uses 'vixcls' as the value column; also support adj close
+  const ci = findCol(header, ['vixcls', 'close', 'c', 'adj close', 'adjclose', 'value', 'price']);
+  if (di < 0 || ci < 0) throw new Error(`Cannot find Date or Close column. Headers found: ${header.join(', ')}`);
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].replace(/\r/g, '').split(',').map(s => s.trim().replace(/"/g, ''));
     if (!cols[di]) continue;
     const close = parseFloat(cols[ci]);
-    if (isNaN(close)) continue;
+    if (isNaN(close)) continue; // skip blank/missing rows (FRED sometimes has '.' for missing)
+    const hasOHLC = hi >= 0 && oi >= 0;
     rows.push({
       date: parseDate(cols[di]),
-      open: oi >= 0 ? +parseFloat(cols[oi]).toFixed(2) : close,
-      high: hi >= 0 ? +parseFloat(cols[hi]).toFixed(2) : close,
-      low: li >= 0 ? +parseFloat(cols[li]).toFixed(2) : close,
-      close: +close.toFixed(2)
+      open:  oi >= 0 ? +parseFloat(cols[oi]).toFixed(2) : close,
+      high:  hi >= 0 ? +parseFloat(cols[hi]).toFixed(2) : close, // if no intraday high, use close
+      low:   li >= 0 ? +parseFloat(cols[li]).toFixed(2) : close,
+      close: +close.toFixed(2),
+      closeOnly: !hasOHLC  // flag: only close data, exits fire on close prices only
     });
   }
   rows.sort((a, b) => a.date.localeCompare(b.date));
@@ -844,7 +924,6 @@ function normCDF(x) {
 }
 
 function bsCallPrice(S, K, T, r, sigma) {
-  // T in years
   if (T <= 0) return Math.max(0, S - K);
   const sqrtT = Math.sqrt(T);
   const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
@@ -852,14 +931,72 @@ function bsCallPrice(S, K, T, r, sigma) {
   return S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2);
 }
 
-function estimateOptionPrice(vixLevel, strike, daysToExpiry, iv) {
-  const S = vixLevel;
-  const K = strike;
-  const T = daysToExpiry / 365;
+// ── Realistic option pricing ───────────────────────────────────────────────
+// Returns { mid, ask, bid, futuresLevel }
+// futuresBasis: VIX futures premium over spot (contango, typically 3–6pts)
+// askSpreadPct / bidSpreadPct: half-spread as % of mid (e.g. 50 = ±25% of mid)
+function realisticOptionPrice(spotVix, strike, daysToExpiry, iv, futuresBasis, askSpreadPct, bidSpreadPct) {
+  // Price off the futures level, not spot
+  const F = spotVix + futuresBasis;
+  const T = Math.max(1, daysToExpiry) / 365;
   const r = 0.05;
   const sigma = iv / 100;
-  const price = bsCallPrice(S, K, T, r, sigma);
-  return Math.max(0.05, +price.toFixed(2));
+
+  const mid = bsCallPrice(F, strike, T, r, sigma);
+
+  // Minimum real-world quote floor: ~$0.05 bid, $0.10 ask on deep OTM
+  const minMid = 0.075;
+  const effMid = Math.max(minMid, mid);
+
+  // Ask = mid + half-spread; Bid = mid - half-spread
+  // Spread widens as option goes deeper OTM (moneyness factor)
+  const moneyness = F / strike; // <1 = OTM
+  const otmFactor = Math.max(1, Math.pow(1 / moneyness, 1.5)); // deeper OTM = wider spread
+  const halfAskSpread = effMid * (askSpreadPct / 100) * 0.5 * otmFactor;
+  const halfBidSpread = effMid * (bidSpreadPct / 100) * 0.5 * otmFactor;
+
+  const ask = +(effMid + halfAskSpread).toFixed(3);
+  const bid = Math.max(0.01, +(effMid - halfBidSpread).toFixed(3));
+
+  return { mid: +effMid.toFixed(3), ask, bid, futuresLevel: +F.toFixed(2) };
+}
+
+// ── During a spike: IV expands and spread widens ───────────────────────────
+function exitOptionPrice(spotVix, strike, daysToExpiry, ivExit, bidSpreadPct, futuresBasis) {
+  // During a spike the futures basis collapses — VIX spot surges to/past futures
+  // Use reduced basis (spike compresses contango, sometimes inverts)
+  const spikeBasis = Math.min(futuresBasis, Math.max(0, futuresBasis - (spotVix - 20) * 0.3));
+  const F = spotVix + spikeBasis;
+  const T = Math.max(0.5, daysToExpiry) / 365;
+  const sigma = ivExit / 100;
+  const mid = bsCallPrice(F, strike, T, 0.05, sigma);
+
+  // Spreads widen during spikes — use bidSpread * 1.5 for exit
+  const halfBid = mid * (bidSpreadPct / 100) * 0.75;
+  const bid = Math.max(0.01, +(mid - halfBid).toFixed(3));
+  return { mid: +mid.toFixed(3), bid, futuresLevel: +F.toFixed(2) };
+}
+
+// ══════════════════════════════════════════════════
+//  PRICING PRESET HELPER
+// ══════════════════════════════════════════════════
+function setPricingPreset(mode) {
+  const presets = {
+    optimistic:   { basis: 0,   ask: 20,  bid: 20,  ivEntry: 70,  ivExit: 120 },
+    realistic:    { basis: 4,   ask: 50,  bid: 50,  ivEntry: 85,  ivExit: 150 },
+    conservative: { basis: 6,   ask: 80,  bid: 80,  ivEntry: 100, ivExit: 200 },
+  };
+  const p = presets[mode];
+  document.getElementById('futuresBasis').value = p.basis;
+  document.getElementById('futuresBasisVal').textContent = p.basis;
+  document.getElementById('askSpread').value = p.ask;
+  document.getElementById('askSpreadVal').textContent = p.ask + '%';
+  document.getElementById('bidSpread').value = p.bid;
+  document.getElementById('bidSpreadVal').textContent = p.bid + '%';
+  document.getElementById('ivEntry').value = p.ivEntry;
+  document.getElementById('ivEntryVal').textContent = p.ivEntry + '%';
+  document.getElementById('ivExit').value = p.ivExit;
+  document.getElementById('ivExitVal').textContent = p.ivExit + '%';
 }
 
 // ══════════════════════════════════════════════════
@@ -874,101 +1011,122 @@ function getSettings() {
   if (document.getElementById('strike').value === 'custom') {
     strike = parseFloat(document.getElementById('customStrike').value);
   }
-  const expiration = parseInt(document.getElementById('expiration').value);
-  const exitRuleRaw = document.getElementById('exitRule').value;
+  const expiration    = parseInt(document.getElementById('expiration').value);
+  const exitRuleRaw   = document.getElementById('exitRule').value;
   let exitVix = null;
   if (exitRuleRaw.startsWith('vix')) exitVix = parseInt(exitRuleRaw.slice(3));
 
-  const stopLossRaw = document.getElementById('stopLoss').value;
-  const stopLoss = stopLossRaw === 'none' ? null : parseFloat(stopLossRaw);
-
+  const stopLossRaw    = document.getElementById('stopLoss').value;
+  const stopLoss       = stopLossRaw === 'none' ? null : parseFloat(stopLossRaw);
   const profitTargetRaw = document.getElementById('profitTarget').value;
-  const profitTarget = profitTargetRaw === 'none' ? null : parseFloat(profitTargetRaw);
+  const profitTarget   = profitTargetRaw === 'none' ? null : parseFloat(profitTargetRaw);
+  const entryRule      = document.getElementById('entryRule').value;
+  const riskPerTrade   = parseFloat(document.getElementById('riskPerTrade').value) || 1000;
 
-  const entryRule = document.getElementById('entryRule').value;
-  const riskPerTrade = parseFloat(document.getElementById('riskPerTrade').value) || 1000;
-  const iv = parseFloat(document.getElementById('ivOverride').value) || 80;
+  // Realistic pricing params
+  const futuresBasis = parseFloat(document.getElementById('futuresBasis').value) || 4;
+  const askSpread    = parseFloat(document.getElementById('askSpread').value) || 50;
+  const bidSpread    = parseFloat(document.getElementById('bidSpread').value) || 50;
+  const ivEntry      = parseFloat(document.getElementById('ivEntry').value) || 85;
+  const ivExit       = parseFloat(document.getElementById('ivExit').value) || 150;
 
-  return { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget, entryRule, riskPerTrade, iv };
+  return { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget,
+           entryRule, riskPerTrade, futuresBasis, askSpread, bidSpread, ivEntry, ivExit };
 }
 
 function backtestEngine(data, settings) {
-  const { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget, entryRule, riskPerTrade, iv } = settings;
+  const { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget,
+          entryRule, riskPerTrade, futuresBasis, askSpread, bidSpread, ivEntry, ivExit } = settings;
 
   const trades = [];
-  let inTrade = false;
-  let trade = null;
+  let inTrade = false, trade = null;
   const MIN_DAYS_BETWEEN = 5;
   let lastExitIdx = -999;
 
   for (let i = 1; i < data.length; i++) {
-    const row = data[i];
+    const row  = data[i];
     const prev = data[i - 1];
 
-    // Check exit first
+    // ── CHECK EXIT ─────────────────────────────────────────────────────────
     if (inTrade) {
       const daysHeld = daysBetween(trade.entryDate, row.date);
-      const currentIV = Math.max(iv * 0.4, iv * (0.5 + (row.close / trade.entryVix) * 0.5));
       const daysLeft = expiration - daysHeld;
-      const currentPrice = daysLeft > 0
-        ? estimateOptionPrice(row.close, strike, daysLeft, currentIV)
-        : Math.max(0, row.close - strike);
-      const returnPct = (currentPrice - trade.entryPrice) / trade.entryPrice;
+
+      // IV scales up proportionally as VIX rises from entry level
+      // But clamp to ivExit ceiling so it doesn't explode unrealistically
+      const vixRatio = row.close / trade.entryVix;
+      const currentIV = Math.min(ivExit, ivEntry * Math.max(0.5, vixRatio));
+
+      // Mid price for monitoring SL/PT (use bid for realistic mark)
+      const pricingNow = realisticOptionPrice(row.close, strike, Math.max(1, daysLeft), currentIV,
+                                               futuresBasis, askSpread, bidSpread);
+      const markPrice   = pricingNow.bid; // mark-to-market at bid (pessimistic but realistic)
+      const unrealizedRet = (markPrice - trade.entryAsk) / trade.entryAsk;
 
       let exitReason = null;
-
-      if (exitVix && row.high >= exitVix) exitReason = `VIX ≥ ${exitVix}`;
-      if (daysLeft <= 0) exitReason = 'Expiration';
-      if (stopLoss && returnPct <= -stopLoss) exitReason = `Stop Loss ${(stopLoss * 100).toFixed(0)}%`;
-      if (profitTarget && returnPct >= profitTarget) exitReason = `Profit Target ${(profitTarget * 100).toFixed(0)}%`;
+      if (exitVix   && row.close >= exitVix)          exitReason = `VIX ≥ ${exitVix}`;
+      if (daysLeft  <= 0)                              exitReason = 'Expiration';
+      if (stopLoss  && unrealizedRet <= -stopLoss)     exitReason = `Stop Loss ${(stopLoss*100).toFixed(0)}%`;
+      if (profitTarget && unrealizedRet >= profitTarget) exitReason = `Profit Target`;
 
       if (exitReason) {
-        const exitVixLevel = exitVix && row.high >= exitVix ? row.high : row.close;
-        const finalPrice = exitReason === `VIX ≥ ${exitVix}`
-          ? estimateOptionPrice(Math.min(row.high, exitVix + 5), strike, Math.max(1, daysLeft), currentIV)
-          : currentPrice;
-        const finalReturn = (finalPrice - trade.entryPrice) / trade.entryPrice;
-        const dollars = riskPerTrade * finalReturn;
+        let exitBid, exitFutures;
+
+        if (exitReason === `VIX ≥ ${exitVix}`) {
+          // Sell into the spike at exit IV — use exitIV and compressed basis
+          const ep = exitOptionPrice(row.close, strike, Math.max(1, daysLeft), ivExit, bidSpread, futuresBasis);
+          exitBid     = ep.bid;
+          exitFutures = ep.futuresLevel;
+        } else {
+          exitBid     = markPrice;
+          exitFutures = pricingNow.futuresLevel;
+        }
+
+        const finalReturn = (exitBid - trade.entryAsk) / trade.entryAsk;
+        const dollars     = riskPerTrade * finalReturn;
 
         trades.push({
           ...trade,
-          exitDate: row.date,
-          exitVix: +exitVixLevel.toFixed(2),
-          exitPrice: +finalPrice.toFixed(2),
-          returnPct: +(finalReturn * 100).toFixed(1),
-          dollars: +dollars.toFixed(2),
+          exitDate:     row.date,
+          exitVix:      +row.close.toFixed(2),
+          exitFutures:  +exitFutures.toFixed(2),
+          exitPrice:    +exitBid.toFixed(3),   // what you actually received (bid)
+          entryMid:     trade.entryMid,
+          returnPct:    +(finalReturn * 100).toFixed(1),
+          dollars:      +dollars.toFixed(2),
           daysHeld,
           exitReason
         });
-        inTrade = false;
+        inTrade    = false;
         lastExitIdx = i;
       }
       continue;
     }
 
-    // Check entry
+    // ── CHECK ENTRY ────────────────────────────────────────────────────────
     if (i - lastExitIdx < MIN_DAYS_BETWEEN) continue;
 
     let signal = false;
-    if (entryRule === 'close_below') {
-      signal = row.close < entryThreshold;
-    } else if (entryRule === 'turn_up') {
-      signal = prev.close < entryThreshold && row.close > prev.close;
-    } else if (entryRule === 'weekly') {
-      // Only enter on Monday-ish (first trade of the week)
-      const dayOfWeek = new Date(row.date).getDay();
-      signal = row.close < entryThreshold && dayOfWeek === 1;
+    if      (entryRule === 'close_below') signal = row.close < entryThreshold;
+    else if (entryRule === 'turn_up')     signal = prev.close < entryThreshold && row.close > prev.close;
+    else if (entryRule === 'weekly') {
+      const dow = new Date(row.date).getDay();
+      signal = row.close < entryThreshold && dow === 1;
     }
 
     if (signal) {
       const expiryDate = addDays(row.date, expiration);
-      const entryPrice = estimateOptionPrice(row.close, strike, expiration, iv);
+      const pricing    = realisticOptionPrice(row.close, strike, expiration, ivEntry,
+                                               futuresBasis, askSpread, bidSpread);
       trade = {
-        entryDate: row.date,
-        entryVix: row.close,
+        entryDate:    row.date,
+        entryVix:     row.close,
+        entryFutures: pricing.futuresLevel,
         strike,
         expiryDate,
-        entryPrice: +entryPrice.toFixed(2)
+        entryMid:     pricing.mid,
+        entryAsk:     pricing.ask,   // you pay the ask
+        entryPrice:   pricing.ask,   // alias for display
       };
       inTrade = true;
     }
@@ -980,6 +1138,7 @@ function backtestEngine(data, settings) {
 function runBacktest() {
   if (vixData.length === 0) {
     loadDemoData();
+    showStatus('vixStatus', '⚠ No data uploaded — using demo data. Upload VIXCLS.csv for real results.', 'err');
   }
   const settings = getSettings();
   showProgress(true);
@@ -1085,9 +1244,12 @@ function renderResults(trades, settings) {
   `;
 
   document.getElementById('resultsNote').innerHTML = `
-    <strong>Strategy:</strong> VIX ${settings.entryRule.replace(/_/g,' ')} below ${settings.entryThreshold} → Buy ${settings.strike} Call, ${settings.expiration} DTE, IV=${settings.iv}% |
+    <strong>Strategy:</strong> VIX ${settings.entryRule.replace(/_/g,' ')} below ${settings.entryThreshold} → Buy ${settings.strike} Call, ${settings.expiration} DTE |
     Exit: ${document.getElementById('exitRule').options[document.getElementById('exitRule').selectedIndex].text} |
-    Risk: $${settings.riskPerTrade}/trade
+    Risk: $${settings.riskPerTrade}/trade |
+    <span style="color:var(--accent2)">Fwd basis: +${settings.futuresBasis}pts</span> |
+    <span style="color:var(--amber)">Entry IV: ${settings.ivEntry}% ask+${settings.askSpread}%spread</span> |
+    <span style="color:var(--green)">Exit IV: ${settings.ivExit}% bid-${settings.bidSpread}%spread</span>
   `;
 }
 
@@ -1105,32 +1267,34 @@ function renderTradeLog(trades) {
   const body = document.getElementById('tradeBody');
   body.innerHTML = trades.map((t, i) => {
     const retClass = t.returnPct >= 0 ? 'positive' : 'negative';
-    const retSign = t.returnPct >= 0 ? '+' : '';
-    const tag = t.returnPct >= 100 ? '<span class="tag tag-green">2x+</span>'
-              : t.returnPct >= 400 ? '<span class="tag tag-green">5x+</span>'
-              : t.returnPct <= -50 ? '<span class="tag tag-red">-50%</span>' : '';
+    const retSign  = t.returnPct >= 0 ? '+' : '';
+    const tag = t.returnPct >= 400 ? '<span class="tag tag-green">5x+</span>'
+              : t.returnPct >= 100 ? '<span class="tag tag-green">2x+</span>'
+              : t.returnPct <= -80 ? '<span class="tag tag-red">-80%+</span>' : '';
     return `<tr>
       <td style="color:var(--text3)">${i + 1}</td>
       <td>${t.entryDate}</td>
       <td>${t.entryVix.toFixed(2)}</td>
+      <td style="color:var(--accent2)">${t.entryFutures ? t.entryFutures.toFixed(2) : '—'}</td>
       <td>${t.strike}</td>
-      <td>${t.expiryDate}</td>
-      <td>$${t.entryPrice.toFixed(2)}</td>
+      <td style="color:var(--text3)">$${(t.entryMid||t.entryPrice).toFixed(3)}</td>
+      <td style="color:var(--amber)">$${t.entryAsk ? t.entryAsk.toFixed(3) : t.entryPrice.toFixed(3)}</td>
       <td>${t.exitDate}</td>
       <td>${t.exitVix.toFixed(2)}</td>
-      <td>$${t.exitPrice.toFixed(2)}</td>
+      <td style="color:var(--green)">$${t.exitPrice.toFixed(3)}</td>
       <td class="${retClass}">${retSign}${t.returnPct.toFixed(1)}% ${tag}</td>
       <td>${t.daysHeld}</td>
-      <td style="color:var(--text3)">${t.exitReason}</td>
+      <td style="color:var(--text3);font-size:10px">${t.exitReason}</td>
     </tr>`;
   }).join('');
 }
 
 function downloadCSV() {
-  const headers = ['#','Entry Date','Entry VIX','Strike','Expiry Date','Entry Price','Exit Date','Exit VIX','Exit Price','Return %','Days Held','Exit Reason'];
+  const headers = ['#','Entry Date','Spot VIX','Fwd (Futures)','Strike','Mid Price','Entry Ask (paid)','Exit Date','Exit VIX','Exit Bid (received)','Return %','P&L $','Days Held','Exit Reason'];
   const rows = lastTrades.map((t, i) => [
-    i+1, t.entryDate, t.entryVix, t.strike, t.expiryDate, t.entryPrice,
-    t.exitDate, t.exitVix, t.exitPrice, t.returnPct, t.daysHeld, t.exitReason
+    i+1, t.entryDate, t.entryVix, t.entryFutures||'', t.strike,
+    t.entryMid||t.entryPrice, t.entryAsk||t.entryPrice,
+    t.exitDate, t.exitVix, t.exitPrice, t.returnPct, t.dollars, t.daysHeld, t.exitReason
   ]);
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -1350,11 +1514,11 @@ function chartDefaults() {
 //  COMPARISON
 // ══════════════════════════════════════════════════
 const COMPARE_PRESETS = [
-  { label: '40C <15 180d sell30', entryThreshold:15, strike:40, expiration:180, exitVix:30, iv:80, entryRule:'close_below' },
-  { label: '30C <15 180d sell25', entryThreshold:15, strike:30, expiration:180, exitVix:25, iv:80, entryRule:'close_below' },
-  { label: '40C <17 180d sell30', entryThreshold:17, strike:40, expiration:180, exitVix:30, iv:80, entryRule:'close_below' },
-  { label: '30C <17 365d sell25', entryThreshold:17, strike:30, expiration:365, exitVix:25, iv:80, entryRule:'close_below' },
-  { label: '25C <15 90d sell20',  entryThreshold:15, strike:25, expiration:90,  exitVix:20, iv:80, entryRule:'close_below' },
+  { label: '30C <18 150d sell25 SL50', entryThreshold:18, strike:30, expiration:150, exitVix:25, iv:80, entryRule:'close_below' },
+  { label: '30C <17 150d sell25 SL50', entryThreshold:17, strike:30, expiration:150, exitVix:25, iv:80, entryRule:'close_below' },
+  { label: '30C <18 90d sell25',       entryThreshold:18, strike:30, expiration:90,  exitVix:25, iv:80, entryRule:'close_below' },
+  { label: '55C <20 180d sell35',      entryThreshold:20, strike:55, expiration:180, exitVix:35, iv:80, entryRule:'close_below' },
+  { label: '40C <15 120d sell35',      entryThreshold:15, strike:40, expiration:120, exitVix:35, iv:80, entryRule:'close_below' },
 ];
 
 let compareRowIdx = 0;
@@ -1368,19 +1532,19 @@ function addCompareRow(preset) {
   div.innerHTML = `
     <div class="field"><label>Entry VIX &lt;</label>
       <select id="ce-${id}">
-        ${[13,14,15,16,17].map(v => `<option value="${v}" ${v==p.entryThreshold?'selected':''}>${v}</option>`).join('')}
+        ${[13,14,15,16,17,18,19,20,22,25].map(v => `<option value="${v}" ${v==p.entryThreshold?'selected':''}>${v}</option>`).join('')}
       </select></div>
     <div class="field"><label>Strike</label>
       <select id="cs-${id}">
-        ${[20,25,30,35,40,45].map(v => `<option value="${v}" ${v==p.strike?'selected':''}>${v}</option>`).join('')}
+        ${[20,25,30,35,40,45,50,55,60].map(v => `<option value="${v}" ${v==p.strike?'selected':''}>${v}</option>`).join('')}
       </select></div>
     <div class="field"><label>Days to Exp</label>
       <select id="cd-${id}">
-        ${[30,60,90,120,180,270,365].map(v => `<option value="${v}" ${v==p.expiration?'selected':''}>${v}</option>`).join('')}
+        ${[30,45,60,90,120,150,180,270,365].map(v => `<option value="${v}" ${v==p.expiration?'selected':''}>${v}</option>`).join('')}
       </select></div>
     <div class="field"><label>Sell VIX ≥</label>
       <select id="cx-${id}">
-        ${[20,25,30,35,40].map(v => `<option value="${v}" ${v==p.exitVix?'selected':''}>${v}</option>`).join('')}
+        ${[18,20,22,25,28,30,35,40,45].map(v => `<option value="${v}" ${v==p.exitVix?'selected':''}>${v}</option>`).join('')}
         <option value="0">At Expiry</option>
       </select></div>
     <button class="btn btn-secondary btn-sm" onclick="removeCompareRow(${id})">✕</button>
@@ -1417,7 +1581,13 @@ function runCompare() {
       entryThreshold: entry, strike, expiration: dte,
       exitVix: exitVixVal || null,
       stopLoss: null, profitTarget: null,
-      entryRule: 'close_below', riskPerTrade: 1000, iv: 80
+      entryRule: 'close_below', riskPerTrade: 1000,
+      // inherit realistic pricing from the sidebar sliders
+      futuresBasis: parseFloat(document.getElementById('futuresBasis').value) || 4,
+      askSpread:    parseFloat(document.getElementById('askSpread').value) || 50,
+      bidSpread:    parseFloat(document.getElementById('bidSpread').value) || 50,
+      ivEntry:      parseFloat(document.getElementById('ivEntry').value) || 85,
+      ivExit:       parseFloat(document.getElementById('ivExit').value) || 150,
     };
     const trades = backtestEngine(vixData, settings);
     const s = trades.length ? computeStats(trades, 1000, vixData[0].date, vixData[vixData.length-1].date) : null;
