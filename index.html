@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIX Options Backtester</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg: #080c10;
+  --bg2: #0d1219;
+  --bg3: #111820;
+  --bg4: #161e28;
+  --border: #1e2d3d;
+  --border2: #253545;
+  --text: #c8d8e8;
+  --text2: #7a9ab8;
+  --text3: #4a6a88;
+  --accent: #00d4ff;
+  --accent2: #0099cc;
+  --green: #00e676;
+  --red: #ff4444;
+  --amber: #ffb300;
+  --purple: #b47aff;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Syne', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Header ───────────────────────────────── */
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo span { color: var(--text); font-weight: 400; font-size: 14px; }
+.disclaimer-badge {
+  background: rgba(255,179,0,0.12);
+  border: 1px solid rgba(255,179,0,0.3);
+  color: var(--amber);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 56px);
+}
+
+/* ── Sidebar ──────────────────────────────── */
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.panel-header {
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Form controls ───────────────────────── */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11px; color: var(--text3); letter-spacing: 0.5px; }
+.field select, .field input[type="number"], .field input[type="text"] {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.field select:focus, .field input:focus { border-color: var(--accent2); }
+.field select option { background: var(--bg3); }
+
+.checkbox-group { display: flex; flex-direction: column; gap: 6px; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox-row input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+.checkbox-row span { font-size: 12px; color: var(--text2); }
+
+.upload-zone {
+  border: 1px dashed var(--border2);
+  border-radius: 4px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text3);
+  font-size: 11px;
+}
+.upload-zone:hover { border-color: var(--accent2); color: var(--text); }
+.upload-zone input { display: none; }
+.upload-zone .icon { font-size: 20px; margin-bottom: 4px; }
+.upload-status { font-size: 11px; padding: 6px 10px; border-radius: 4px; }
+.upload-status.ok { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3); color: var(--green); }
+.upload-status.err { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); color: var(--red); }
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.5px;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+.btn-primary:hover { background: #33ddff; transform: translateY(-1px); }
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+}
+.btn-secondary:hover { border-color: var(--accent2); color: var(--accent); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+.btn-full { width: 100%; }
+
+/* ── Main content ─────────────────────────── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Tabs ─────────────────────────────────── */
+.tabs {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0;
+  padding: 0 20px;
+}
+.tab {
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text3);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── Content area ─────────────────────────── */
+.content { padding: 20px; overflow-y: auto; flex: 1; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Stat cards ───────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+}
+.stat-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.accent { color: var(--accent); }
+.stat-value.purple { color: var(--purple); }
+
+/* ── Charts ───────────────────────────────── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.charts-grid.full { grid-template-columns: 1fr; }
+.chart-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+}
+.chart-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+.chart-box canvas { max-height: 220px; }
+.chart-vix canvas { max-height: 280px; }
+
+/* ── Table ────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+thead th {
+  background: var(--bg4);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+thead th:hover { color: var(--text); }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg4); }
+tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
+.positive { color: var(--green); }
+.negative { color: var(--red); }
+
+/* ── Comparison ───────────────────────────── */
+.compare-row {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+.compare-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+
+/* ── Empty/placeholder ─────────────────────── */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text3);
+  text-align: center;
+}
+.placeholder .big { font-size: 48px; }
+.placeholder h3 { font-family: var(--font-display); font-size: 16px; color: var(--text2); }
+
+/* ── Modal ────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 560px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal h2 { font-family: var(--font-display); font-size: 18px; color: var(--amber); margin-bottom: 16px; }
+.modal p { color: var(--text2); line-height: 1.8; margin-bottom: 12px; font-size: 12px; }
+.modal-close { margin-top: 16px; }
+
+/* ── Progress ─────────────────────────────── */
+.progress-bar {
+  height: 3px;
+  background: var(--bg4);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 0.3s;
+}
+
+/* ── Scroll ───────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.tag-green { background: rgba(0,230,118,0.15); color: var(--green); }
+.tag-red { background: rgba(255,68,68,0.15); color: var(--red); }
+.tag-amber { background: rgba(255,179,0,0.15); color: var(--amber); }
+
+.note {
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.15);
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    ▣ VOLSCAN <span>/ VIX Options Backtester</span>
+  </div>
+  <button class="disclaimer-badge" onclick="showDisclaimer()">⚠ Important Disclaimer</button>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Data Input -->
+    <div class="panel">
+      <div class="panel-header">📁 Data Input</div>
+      <div class="panel-body">
+        <label class="upload-zone" id="vixUploadZone">
+          <div class="icon">📈</div>
+          <div><strong>VIX Historical CSV</strong></div>
+          <div style="margin-top:4px;color:var(--text3)">Date, Open, High, Low, Close</div>
+          <input type="file" id="vixFile" accept=".csv">
+        </label>
+        <div id="vixStatus" style="display:none"></div>
+        <div class="note" style="font-size:10px">No file? Built-in synthetic VIX data (2020–2026) will be used for demo purposes.</div>
+        <button class="btn btn-secondary btn-sm btn-full" onclick="loadDemoData()">Load Demo Data</button>
+      </div>
+    </div>
+
+    <!-- Strategy Settings -->
+    <div class="panel">
+      <div class="panel-header">⚙ Strategy Settings</div>
+      <div class="panel-body">
+
+        <div class="field">
+          <label>Entry VIX Level</label>
+          <select id="entryLevel">
+            <option value="13">Below 13</option>
+            <option value="14">Below 14</option>
+            <option value="15" selected>Below 15</option>
+            <option value="16">Below 16</option>
+            <option value="17">Below 17</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field" id="customEntryField" style="display:none">
+          <label>Custom Entry Level</label>
+          <input type="number" id="customEntry" value="15" min="5" max="50" step="0.5">
+        </div>
+
+        <div class="field">
+          <label>Entry Rule</label>
+          <select id="entryRule">
+            <option value="close_below">Close below threshold</option>
+            <option value="turn_up">Close below then turns up</option>
+            <option value="weekly">Weekly close below threshold</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Call Strike</label>
+          <select id="strike">
+            <option value="20">20</option>
+            <option value="25">25</option>
+            <option value="30">30</option>
+            <option value="35">35</option>
+            <option value="40" selected>40</option>
+            <option value="45">45</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field" id="customStrikeField" style="display:none">
+          <label>Custom Strike</label>
+          <input type="number" id="customStrike" value="40" min="10" max="100" step="1">
+        </div>
+
+        <div class="field">
+          <label>Expiration (Days)</label>
+          <select id="expiration">
+            <option value="30">30 days</option>
+            <option value="60">60 days</option>
+            <option value="90">90 days</option>
+            <option value="120">120 days</option>
+            <option value="180" selected>180 days</option>
+            <option value="270">270 days</option>
+            <option value="365">365 days</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Exit Rule</label>
+          <select id="exitRule">
+            <option value="vix20">Sell when VIX ≥ 20</option>
+            <option value="vix25">Sell when VIX ≥ 25</option>
+            <option value="vix30" selected>Sell when VIX ≥ 30</option>
+            <option value="vix35">Sell when VIX ≥ 35</option>
+            <option value="vix40">Sell when VIX ≥ 40</option>
+            <option value="expiry">Hold to Expiration</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Stop Loss</label>
+          <select id="stopLoss">
+            <option value="none" selected>None</option>
+            <option value="0.5">Lose 50%</option>
+            <option value="0.75">Lose 75%</option>
+            <option value="0.9">Lose 90%</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Profit Target</label>
+          <select id="profitTarget">
+            <option value="none" selected>None</option>
+            <option value="1">100% (2x)</option>
+            <option value="2">200% (3x)</option>
+            <option value="3">300% (4x)</option>
+            <option value="5">500% (6x)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Risk Per Trade ($)</label>
+          <input type="number" id="riskPerTrade" value="1000" min="100" max="100000" step="100">
+        </div>
+
+        <div class="field">
+          <label>Implied Volatility Override (%)</label>
+          <input type="number" id="ivOverride" value="80" min="20" max="200" step="5">
+          <span style="font-size:10px;color:var(--text3)">Used for BS pricing (VIX fwd IV ≈ 70–100%)</span>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="runBacktest()">▶ RUN BACKTEST</button>
+        <div id="btProgress" style="display:none">
+          <div style="font-size:11px;color:var(--text3)">Running...</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="note" style="font-size:10px;padding:12px">
+      <strong style="color:var(--accent)">Pricing Model Note</strong><br>
+      VIX options are priced off VIX futures, not spot VIX. This tool uses Black-Scholes on spot VIX as an approximation. Real backtesting requires historical option chain data.
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('results')">📊 Results</div>
+      <div class="tab" onclick="switchTab('tradelog')">📋 Trade Log</div>
+      <div class="tab" onclick="switchTab('charts')">📉 Charts</div>
+      <div class="tab" onclick="switchTab('compare')">⚖ Compare</div>
+    </div>
+
+    <div class="content">
+
+      <!-- RESULTS TAB -->
+      <div id="tab-results" class="tab-panel active">
+        <div id="results-placeholder" class="placeholder">
+          <div class="big">📉</div>
+          <h3>No Backtest Run Yet</h3>
+          <p>Upload VIX data (or load demo data), configure your strategy settings, then click Run Backtest.</p>
+        </div>
+        <div id="results-content" style="display:none">
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="stats-grid" id="statsGrid2"></div>
+          <div class="note" id="resultsNote"></div>
+        </div>
+      </div>
+
+      <!-- TRADE LOG TAB -->
+      <div id="tab-tradelog" class="tab-panel">
+        <div id="tradelog-placeholder" class="placeholder">
+          <div class="big">📋</div>
+          <h3>No Trades Yet</h3>
+          <p>Run a backtest to see the trade log.</p>
+        </div>
+        <div id="tradelog-content" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="section-title" style="margin:0">Trade Log</div>
+            <button class="btn btn-secondary btn-sm" onclick="downloadCSV()">⬇ Download CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table id="tradeTable">
+              <thead><tr>
+                <th>#</th>
+                <th onclick="sortTable(1)">Entry Date ↕</th>
+                <th onclick="sortTable(2)">Entry VIX ↕</th>
+                <th>Strike</th>
+                <th>Expiry Date</th>
+                <th onclick="sortTable(5)">Entry Price ↕</th>
+                <th onclick="sortTable(6)">Exit Date ↕</th>
+                <th>Exit VIX</th>
+                <th onclick="sortTable(8)">Exit Price ↕</th>
+                <th onclick="sortTable(9)">Return % ↕</th>
+                <th>Days Held</th>
+                <th>Exit Reason</th>
+              </tr></thead>
+              <tbody id="tradeBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS TAB -->
+      <div id="tab-charts" class="tab-panel">
+        <div id="charts-placeholder" class="placeholder">
+          <div class="big">📈</div>
+          <h3>No Charts Yet</h3>
+          <p>Run a backtest to generate charts.</p>
+        </div>
+        <div id="charts-content" style="display:none">
+          <div class="charts-grid full chart-vix" style="margin-bottom:16px">
+            <div class="chart-box" style="padding:16px">
+              <div class="chart-title">VIX Historical + Entry/Exit Markers</div>
+              <canvas id="vixChart"></canvas>
+            </div>
+          </div>
+          <div class="charts-grid" style="margin-bottom:16px">
+            <div class="chart-box">
+              <div class="chart-title">Equity Curve ($)</div>
+              <canvas id="equityChart"></canvas>
+            </div>
+            <div class="chart-box">
+              <div class="chart-title">Return Distribution (%)</div>
+              <canvas id="histChart"></canvas>
+            </div>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-box">
+              <div class="chart-title">Entry VIX vs Return %</div>
+              <canvas id="scatterEntryChart"></canvas>
+            </div>
+            <div class="chart-box">
+              <div class="chart-title">Days Held vs Return %</div>
+              <canvas id="scatterDaysChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPARE TAB -->
+      <div id="tab-compare" class="tab-panel">
+        <div class="section-title">Strategy Comparison</div>
+        <div class="note" style="margin-bottom:16px">Add up to 6 strategies to compare side-by-side. Each uses the same VIX data.</div>
+        <div id="compareRows"></div>
+        <div class="compare-actions">
+          <button class="btn btn-secondary btn-sm" onclick="addCompareRow()">+ Add Strategy</button>
+          <button class="btn btn-primary btn-sm" onclick="runCompare()">▶ Run All Comparisons</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadPresets()">Load Presets</button>
+        </div>
+        <div id="compareResults" style="display:none">
+          <div class="section-title">Comparison Results</div>
+          <div class="table-wrap">
+            <table id="compareTable">
+              <thead><tr>
+                <th>Strategy</th>
+                <th>Trades</th>
+                <th>Win Rate</th>
+                <th>Avg Return</th>
+                <th>Median Ret</th>
+                <th>Best</th>
+                <th>Worst</th>
+                <th>Profit Factor</th>
+                <th>Total P&L</th>
+                <th>CAGR</th>
+                <th>2x Hit%</th>
+                <th>5x Hit%</th>
+              </tr></thead>
+              <tbody id="compareBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Disclaimer Modal -->
+<div class="modal-overlay" id="disclaimerModal">
+  <div class="modal">
+    <h2>⚠ Important Disclaimer</h2>
+    <p><strong>This tool is for educational and analytical purposes only.</strong></p>
+    <p>VIX options are priced from VIX futures, not spot VIX. Any option pricing estimate based solely on spot VIX is an approximation and may differ materially from actual historical option prices. Actual option premiums depend on the VIX futures term structure, which can trade at a significant premium or discount to spot VIX.</p>
+    <p>The Black-Scholes model used here does not perfectly model VIX options due to the mean-reverting nature of volatility, jump risk, and the futures-based settlement mechanism.</p>
+    <p>Past performance of any strategy does not guarantee future results. Options trading involves substantial risk of loss and may not be suitable for all investors. This is not financial advice.</p>
+    <p>For real trade decisions, use actual historical option chain data from CBOE or a data provider.</p>
+    <button class="btn btn-secondary modal-close" onclick="hideDisclaimer()">I Understand</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let vixData = [];
+let lastTrades = [];
+let compareRows = [];
+let chartInstances = {};
+
+// ══════════════════════════════════════════════════
+//  DEMO DATA — synthetic VIX series 2020–2026
+// ══════════════════════════════════════════════════
+function generateDemoData() {
+  // Seed a realistic-ish VIX series
+  const rows = [];
+  // Key events embedded
+  const events = {
+    '2020-02-24': 40, '2020-03-16': 82, '2020-03-18': 65,
+    '2020-04-01': 45, '2020-05-01': 34, '2020-06-01': 27,
+    '2020-09-04': 33, '2020-10-30': 40, '2020-11-09': 24,
+    '2020-12-31': 22,
+    '2021-01-27': 37, '2021-02-26': 28, '2021-03-31': 19,
+    '2021-06-30': 15, '2021-09-30': 22, '2021-12-01': 31,
+    '2021-12-31': 17,
+    '2022-01-24': 38, '2022-03-07': 36, '2022-06-17': 34,
+    '2022-09-30': 31, '2022-10-13': 34, '2022-12-31': 21,
+    '2023-03-13': 26, '2023-05-01': 17, '2023-06-30': 14,
+    '2023-09-29': 19, '2023-12-31': 13,
+    '2024-01-31': 14, '2024-04-19': 21, '2024-06-28': 12,
+    '2024-08-05': 65, '2024-08-15': 20, '2024-09-30': 17,
+    '2024-10-31': 23, '2024-12-18': 28, '2024-12-31': 18,
+    '2025-02-28': 22, '2025-04-04': 52, '2025-04-09': 35,
+    '2025-05-30': 18, '2025-08-29': 17, '2025-12-31': 19,
+    '2026-01-31': 16, '2026-04-04': 36, '2026-04-27': 17,
+  };
+
+  let date = new Date('2020-01-02');
+  const endDate = new Date('2026-04-28');
+  let vix = 14;
+  const eventKeys = Object.keys(events).map(k => ({ d: new Date(k), v: events[k] }));
+
+  while (date <= endDate) {
+    const dow = date.getDay();
+    if (dow === 0 || dow === 6) { date.setDate(date.getDate() + 1); continue; }
+
+    const ds = date.toISOString().slice(0, 10);
+
+    // Interpolate toward any nearby event
+    for (const ev of eventKeys) {
+      const diff = (ev.d - date) / 86400000;
+      if (diff >= 0 && diff < 5) {
+        const w = Math.max(0, 1 - diff / 5);
+        vix = vix + (ev.v - vix) * w * 0.7;
+      }
+    }
+
+    // Mean reversion toward 18, daily noise
+    const target = 18;
+    const rev = 0.03;
+    const noise = (Math.random() - 0.5) * 2.5;
+    const jump = Math.random() < 0.003 ? (Math.random() > 0.5 ? 8 : -4) : 0;
+    vix = Math.max(8, Math.min(90, vix + rev * (target - vix) + noise + jump));
+
+    const o = +(vix + (Math.random() - 0.5) * 0.8).toFixed(2);
+    const h = +(Math.max(o, vix) + Math.random() * 1.5).toFixed(2);
+    const l = +(Math.min(o, vix) - Math.random() * 1.5).toFixed(2);
+    const c = +vix.toFixed(2);
+
+    rows.push({ date: ds, open: o, high: h, low: l, close: c });
+    date.setDate(date.getDate() + 1);
+  }
+
+  return rows;
+}
+
+function loadDemoData() {
+  vixData = generateDemoData();
+  showStatus('vixStatus', `✓ Demo data loaded: ${vixData.length} trading days (2020–2026)`, 'ok');
+}
+
+// ══════════════════════════════════════════════════
+//  CSV PARSER
+// ══════════════════════════════════════════════════
+document.getElementById('vixFile').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (evt) {
+    try {
+      vixData = parseVixCSV(evt.target.result);
+      if (vixData.length < 10) throw new Error('Too few rows');
+      showStatus('vixStatus', `✓ Loaded ${vixData.length} rows from ${file.name}`, 'ok');
+    } catch (err) {
+      showStatus('vixStatus', `✗ Parse error: ${err.message}`, 'err');
+    }
+  };
+  reader.readAsText(file);
+});
+
+function parseVixCSV(text) {
+  const lines = text.trim().split('\n');
+  const header = lines[0].toLowerCase().replace(/\r/g, '').split(',').map(s => s.trim().replace(/"/g, ''));
+  const di = findCol(header, ['date', 'dt', 'time', 'timestamp']);
+  const oi = findCol(header, ['open', 'o']);
+  const hi = findCol(header, ['high', 'h']);
+  const li = findCol(header, ['low', 'l']);
+  const ci = findCol(header, ['close', 'c', 'adj close', 'adjclose']);
+  if (di < 0 || ci < 0) throw new Error('Cannot find Date or Close column');
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].replace(/\r/g, '').split(',').map(s => s.trim().replace(/"/g, ''));
+    if (!cols[di]) continue;
+    const close = parseFloat(cols[ci]);
+    if (isNaN(close)) continue;
+    rows.push({
+      date: parseDate(cols[di]),
+      open: oi >= 0 ? +parseFloat(cols[oi]).toFixed(2) : close,
+      high: hi >= 0 ? +parseFloat(cols[hi]).toFixed(2) : close,
+      low: li >= 0 ? +parseFloat(cols[li]).toFixed(2) : close,
+      close: +close.toFixed(2)
+    });
+  }
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  return rows;
+}
+
+function findCol(header, names) {
+  for (const n of names) {
+    const i = header.findIndex(h => h.includes(n));
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+
+function parseDate(s) {
+  const d = new Date(s);
+  if (!isNaN(d)) return d.toISOString().slice(0, 10);
+  const parts = s.split(/[\/\-]/);
+  if (parts.length === 3) {
+    if (parts[2].length === 4) return `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+  }
+  return s;
+}
+
+function showStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = `upload-status ${type}`;
+  el.textContent = msg;
+}
+
+// ══════════════════════════════════════════════════
+//  BLACK-SCHOLES
+// ══════════════════════════════════════════════════
+function normCDF(x) {
+  const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  const t = 1 / (1 + p * Math.abs(x));
+  const y = 1 - (((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t) * Math.exp(-x*x/2) / Math.sqrt(2*Math.PI);
+  return 0.5 * (1 + sign * (1 - 2 * (1-y)));
+}
+
+function bsCallPrice(S, K, T, r, sigma) {
+  // T in years
+  if (T <= 0) return Math.max(0, S - K);
+  const sqrtT = Math.sqrt(T);
+  const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
+  const d2 = d1 - sigma * sqrtT;
+  return S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2);
+}
+
+function estimateOptionPrice(vixLevel, strike, daysToExpiry, iv) {
+  const S = vixLevel;
+  const K = strike;
+  const T = daysToExpiry / 365;
+  const r = 0.05;
+  const sigma = iv / 100;
+  const price = bsCallPrice(S, K, T, r, sigma);
+  return Math.max(0.05, +price.toFixed(2));
+}
+
+// ══════════════════════════════════════════════════
+//  BACKTEST ENGINE
+// ══════════════════════════════════════════════════
+function getSettings() {
+  let entryThreshold = parseFloat(document.getElementById('entryLevel').value);
+  if (document.getElementById('entryLevel').value === 'custom') {
+    entryThreshold = parseFloat(document.getElementById('customEntry').value);
+  }
+  let strike = parseFloat(document.getElementById('strike').value);
+  if (document.getElementById('strike').value === 'custom') {
+    strike = parseFloat(document.getElementById('customStrike').value);
+  }
+  const expiration = parseInt(document.getElementById('expiration').value);
+  const exitRuleRaw = document.getElementById('exitRule').value;
+  let exitVix = null;
+  if (exitRuleRaw.startsWith('vix')) exitVix = parseInt(exitRuleRaw.slice(3));
+
+  const stopLossRaw = document.getElementById('stopLoss').value;
+  const stopLoss = stopLossRaw === 'none' ? null : parseFloat(stopLossRaw);
+
+  const profitTargetRaw = document.getElementById('profitTarget').value;
+  const profitTarget = profitTargetRaw === 'none' ? null : parseFloat(profitTargetRaw);
+
+  const entryRule = document.getElementById('entryRule').value;
+  const riskPerTrade = parseFloat(document.getElementById('riskPerTrade').value) || 1000;
+  const iv = parseFloat(document.getElementById('ivOverride').value) || 80;
+
+  return { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget, entryRule, riskPerTrade, iv };
+}
+
+function backtestEngine(data, settings) {
+  const { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget, entryRule, riskPerTrade, iv } = settings;
+
+  const trades = [];
+  let inTrade = false;
+  let trade = null;
+  const MIN_DAYS_BETWEEN = 5;
+  let lastExitIdx = -999;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const prev = data[i - 1];
+
+    // Check exit first
+    if (inTrade) {
+      const daysHeld = daysBetween(trade.entryDate, row.date);
+      const currentIV = Math.max(iv * 0.4, iv * (0.5 + (row.close / trade.entryVix) * 0.5));
+      const daysLeft = expiration - daysHeld;
+      const currentPrice = daysLeft > 0
+        ? estimateOptionPrice(row.close, strike, daysLeft, currentIV)
+        : Math.max(0, row.close - strike);
+      const returnPct = (currentPrice - trade.entryPrice) / trade.entryPrice;
+
+      let exitReason = null;
+
+      if (exitVix && row.high >= exitVix) exitReason = `VIX ≥ ${exitVix}`;
+      if (daysLeft <= 0) exitReason = 'Expiration';
+      if (stopLoss && returnPct <= -stopLoss) exitReason = `Stop Loss ${(stopLoss * 100).toFixed(0)}%`;
+      if (profitTarget && returnPct >= profitTarget) exitReason = `Profit Target ${(profitTarget * 100).toFixed(0)}%`;
+
+      if (exitReason) {
+        const exitVixLevel = exitVix && row.high >= exitVix ? row.high : row.close;
+        const finalPrice = exitReason === `VIX ≥ ${exitVix}`
+          ? estimateOptionPrice(Math.min(row.high, exitVix + 5), strike, Math.max(1, daysLeft), currentIV)
+          : currentPrice;
+        const finalReturn = (finalPrice - trade.entryPrice) / trade.entryPrice;
+        const dollars = riskPerTrade * finalReturn;
+
+        trades.push({
+          ...trade,
+          exitDate: row.date,
+          exitVix: +exitVixLevel.toFixed(2),
+          exitPrice: +finalPrice.toFixed(2),
+          returnPct: +(finalReturn * 100).toFixed(1),
+          dollars: +dollars.toFixed(2),
+          daysHeld,
+          exitReason
+        });
+        inTrade = false;
+        lastExitIdx = i;
+      }
+      continue;
+    }
+
+    // Check entry
+    if (i - lastExitIdx < MIN_DAYS_BETWEEN) continue;
+
+    let signal = false;
+    if (entryRule === 'close_below') {
+      signal = row.close < entryThreshold;
+    } else if (entryRule === 'turn_up') {
+      signal = prev.close < entryThreshold && row.close > prev.close;
+    } else if (entryRule === 'weekly') {
+      // Only enter on Monday-ish (first trade of the week)
+      const dayOfWeek = new Date(row.date).getDay();
+      signal = row.close < entryThreshold && dayOfWeek === 1;
+    }
+
+    if (signal) {
+      const expiryDate = addDays(row.date, expiration);
+      const entryPrice = estimateOptionPrice(row.close, strike, expiration, iv);
+      trade = {
+        entryDate: row.date,
+        entryVix: row.close,
+        strike,
+        expiryDate,
+        entryPrice: +entryPrice.toFixed(2)
+      };
+      inTrade = true;
+    }
+  }
+
+  return trades;
+}
+
+function runBacktest() {
+  if (vixData.length === 0) {
+    loadDemoData();
+  }
+  const settings = getSettings();
+  showProgress(true);
+
+  setTimeout(() => {
+    try {
+      setProgress(30);
+      lastTrades = backtestEngine(vixData, settings);
+      setProgress(70);
+      renderResults(lastTrades, settings);
+      renderTradeLog(lastTrades);
+      renderCharts(lastTrades, vixData, settings);
+      setProgress(100);
+      setTimeout(() => showProgress(false), 500);
+    } catch (e) {
+      showProgress(false);
+      alert('Backtest error: ' + e.message);
+    }
+  }, 50);
+}
+
+// ══════════════════════════════════════════════════
+//  RESULTS RENDERING
+// ══════════════════════════════════════════════════
+function computeStats(trades, riskPerTrade, startDate, endDate) {
+  if (trades.length === 0) return null;
+  const returns = trades.map(t => t.returnPct);
+  const winners = trades.filter(t => t.returnPct > 0);
+  const losers = trades.filter(t => t.returnPct <= 0);
+  const winRate = winners.length / trades.length;
+  const avgReturn = mean(returns);
+  const medReturn = median(returns);
+  const bestTrade = Math.max(...returns);
+  const worstTrade = Math.min(...returns);
+  const totalDollars = trades.reduce((s, t) => s + t.dollars, 0);
+  const grossProfit = winners.reduce((s, t) => s + t.dollars, 0);
+  const grossLoss = Math.abs(losers.reduce((s, t) => s + t.dollars, 0));
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 999 : 0;
+  const avgDays = mean(trades.map(t => t.daysHeld));
+
+  // CAGR
+  const years = daysBetween(startDate, endDate) / 365;
+  const totalCapital = riskPerTrade * trades.length;
+  const cagr = years > 0 ? (Math.pow(Math.max(0.01, (totalCapital + totalDollars) / totalCapital), 1 / years) - 1) * 100 : 0;
+
+  // Max drawdown on equity curve
+  let equity = 0, peak = 0, maxDD = 0;
+  for (const t of trades) {
+    equity += t.dollars;
+    if (equity > peak) peak = equity;
+    const dd = (equity - peak) / Math.max(1, Math.abs(peak) + riskPerTrade);
+    if (dd < maxDD) maxDD = dd;
+  }
+
+  const hit2x = trades.filter(t => t.returnPct >= 100).length / trades.length * 100;
+  const hit3x = trades.filter(t => t.returnPct >= 200).length / trades.length * 100;
+  const hit5x = trades.filter(t => t.returnPct >= 400).length / trades.length * 100;
+  const hit10x = trades.filter(t => t.returnPct >= 900).length / trades.length * 100;
+
+  return {
+    trades: trades.length, winRate, avgReturn, medReturn, bestTrade, worstTrade,
+    totalDollars, profitFactor, avgDays, cagr, maxDD: maxDD * 100,
+    hit2x, hit3x, hit5x, hit10x, grossProfit, grossLoss
+  };
+}
+
+function renderResults(trades, settings) {
+  document.getElementById('results-placeholder').style.display = 'none';
+  document.getElementById('results-content').style.display = 'block';
+
+  if (trades.length === 0) {
+    document.getElementById('statsGrid').innerHTML = `<div class="note">No trades found with current settings. Try raising the entry VIX threshold or loading more data.</div>`;
+    document.getElementById('statsGrid2').innerHTML = '';
+    return;
+  }
+
+  const s = computeStats(trades, settings.riskPerTrade, vixData[0].date, vixData[vixData.length - 1].date);
+  if (!s) return;
+
+  const g1 = document.getElementById('statsGrid');
+  const g2 = document.getElementById('statsGrid2');
+
+  g1.innerHTML = `
+    ${statCard('Trades', s.trades, 'accent')}
+    ${statCard('Win Rate', (s.winRate * 100).toFixed(1) + '%', s.winRate >= 0.5 ? 'green' : 'amber')}
+    ${statCard('Avg Return', s.avgReturn.toFixed(1) + '%', s.avgReturn >= 0 ? 'green' : 'red')}
+    ${statCard('Median Return', s.medReturn.toFixed(1) + '%', s.medReturn >= 0 ? 'green' : 'red')}
+    ${statCard('Best Trade', s.bestTrade.toFixed(1) + '%', 'green')}
+    ${statCard('Worst Trade', s.worstTrade.toFixed(1) + '%', 'red')}
+    ${statCard('Max Drawdown', s.maxDD.toFixed(1) + '%', 'red')}
+    ${statCard('Avg Days Held', s.avgDays.toFixed(0) + 'd', '')}
+  `;
+
+  g2.innerHTML = `
+    ${statCard('Profit Factor', s.profitFactor.toFixed(2), s.profitFactor >= 1 ? 'green' : 'red')}
+    ${statCard('Total P&L', '$' + s.totalDollars.toFixed(0), s.totalDollars >= 0 ? 'green' : 'red')}
+    ${statCard('CAGR', s.cagr.toFixed(1) + '%', s.cagr >= 0 ? 'green' : 'red')}
+    ${statCard('Hit 2x+', s.hit2x.toFixed(1) + '%', 'purple')}
+    ${statCard('Hit 3x+', s.hit3x.toFixed(1) + '%', 'purple')}
+    ${statCard('Hit 5x+', s.hit5x.toFixed(1) + '%', 'purple')}
+    ${statCard('Hit 10x+', s.hit10x.toFixed(1) + '%', 'purple')}
+    ${statCard('Entry Threshold', '< ' + settings.entryThreshold, 'accent')}
+  `;
+
+  document.getElementById('resultsNote').innerHTML = `
+    <strong>Strategy:</strong> VIX ${settings.entryRule.replace(/_/g,' ')} below ${settings.entryThreshold} → Buy ${settings.strike} Call, ${settings.expiration} DTE, IV=${settings.iv}% |
+    Exit: ${document.getElementById('exitRule').options[document.getElementById('exitRule').selectedIndex].text} |
+    Risk: $${settings.riskPerTrade}/trade
+  `;
+}
+
+function statCard(label, value, cls) {
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls}">${value}</div></div>`;
+}
+
+// ══════════════════════════════════════════════════
+//  TRADE LOG
+// ══════════════════════════════════════════════════
+function renderTradeLog(trades) {
+  document.getElementById('tradelog-placeholder').style.display = trades.length ? 'none' : 'block';
+  document.getElementById('tradelog-content').style.display = trades.length ? 'block' : 'none';
+
+  const body = document.getElementById('tradeBody');
+  body.innerHTML = trades.map((t, i) => {
+    const retClass = t.returnPct >= 0 ? 'positive' : 'negative';
+    const retSign = t.returnPct >= 0 ? '+' : '';
+    const tag = t.returnPct >= 100 ? '<span class="tag tag-green">2x+</span>'
+              : t.returnPct >= 400 ? '<span class="tag tag-green">5x+</span>'
+              : t.returnPct <= -50 ? '<span class="tag tag-red">-50%</span>' : '';
+    return `<tr>
+      <td style="color:var(--text3)">${i + 1}</td>
+      <td>${t.entryDate}</td>
+      <td>${t.entryVix.toFixed(2)}</td>
+      <td>${t.strike}</td>
+      <td>${t.expiryDate}</td>
+      <td>$${t.entryPrice.toFixed(2)}</td>
+      <td>${t.exitDate}</td>
+      <td>${t.exitVix.toFixed(2)}</td>
+      <td>$${t.exitPrice.toFixed(2)}</td>
+      <td class="${retClass}">${retSign}${t.returnPct.toFixed(1)}% ${tag}</td>
+      <td>${t.daysHeld}</td>
+      <td style="color:var(--text3)">${t.exitReason}</td>
+    </tr>`;
+  }).join('');
+}
+
+function downloadCSV() {
+  const headers = ['#','Entry Date','Entry VIX','Strike','Expiry Date','Entry Price','Exit Date','Exit VIX','Exit Price','Return %','Days Held','Exit Reason'];
+  const rows = lastTrades.map((t, i) => [
+    i+1, t.entryDate, t.entryVix, t.strike, t.expiryDate, t.entryPrice,
+    t.exitDate, t.exitVix, t.exitPrice, t.returnPct, t.daysHeld, t.exitReason
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vix_backtest_trades.csv';
+  a.click();
+}
+
+// ══════════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════════
+function renderCharts(trades, data, settings) {
+  document.getElementById('charts-placeholder').style.display = 'none';
+  document.getElementById('charts-content').style.display = 'block';
+
+  destroyCharts();
+  renderVixChart(trades, data);
+  renderEquityChart(trades, settings.riskPerTrade);
+  renderHistogram(trades);
+  renderScatterEntry(trades);
+  renderScatterDays(trades);
+}
+
+function destroyCharts() {
+  for (const key in chartInstances) {
+    if (chartInstances[key]) chartInstances[key].destroy();
+  }
+  chartInstances = {};
+}
+
+Chart.defaults.color = '#7a9ab8';
+Chart.defaults.borderColor = '#1e2d3d';
+
+function renderVixChart(trades, data) {
+  const ctx = document.getElementById('vixChart').getContext('2d');
+  const labels = data.map(d => d.date);
+  const closes = data.map(d => d.close);
+
+  const entrySet = new Set(trades.map(t => t.entryDate));
+  const exitSet = new Set(trades.map(t => t.exitDate));
+
+  const entryPoints = data.map(d => entrySet.has(d.date) ? d.close : null);
+  const exitPoints = data.map(d => exitSet.has(d.date) ? d.close : null);
+
+  chartInstances.vix = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'VIX Close',
+          data: closes,
+          borderColor: '#00d4ff',
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.1
+        },
+        {
+          label: 'Entry',
+          data: entryPoints,
+          borderColor: 'transparent',
+          backgroundColor: '#00e676',
+          pointRadius: 6,
+          pointStyle: 'triangle',
+          showLine: false
+        },
+        {
+          label: 'Exit',
+          data: exitPoints,
+          borderColor: 'transparent',
+          backgroundColor: '#ff4444',
+          pointRadius: 5,
+          pointStyle: 'rectRot',
+          showLine: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: false,
+      plugins: {
+        legend: { labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 12, font: { size: 10 } } },
+        y: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderEquityChart(trades, riskPerTrade) {
+  const ctx = document.getElementById('equityChart').getContext('2d');
+  let equity = 0;
+  const labels = ['Start'];
+  const equities = [0];
+  for (const t of trades) {
+    equity += t.dollars;
+    labels.push(t.exitDate);
+    equities.push(+equity.toFixed(2));
+  }
+  const color = equity >= 0 ? '#00e676' : '#ff4444';
+  chartInstances.equity = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Equity ($)',
+        data: equities,
+        borderColor: color,
+        backgroundColor: color + '18',
+        fill: true,
+        tension: 0.2,
+        pointRadius: 2
+      }]
+    },
+    options: chartDefaults()
+  });
+}
+
+function renderHistogram(trades) {
+  const ctx = document.getElementById('histChart').getContext('2d');
+  const returns = trades.map(t => t.returnPct);
+  const bins = [-100, -75, -50, -25, 0, 25, 50, 100, 200, 300, 500, 1000];
+  const labels = bins.slice(0, -1).map((b, i) => `${b} to ${bins[i + 1]}%`);
+  const counts = labels.map((_, i) => returns.filter(r => r >= bins[i] && r < bins[i + 1]).length);
+  const colors = counts.map((_, i) => bins[i] >= 0 ? '#00e67688' : '#ff444488');
+
+  chartInstances.hist = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Trade Count',
+        data: counts,
+        backgroundColor: colors,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      ...chartDefaults(),
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 45 } },
+        y: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderScatterEntry(trades) {
+  const ctx = document.getElementById('scatterEntryChart').getContext('2d');
+  const pts = trades.map(t => ({ x: t.entryVix, y: t.returnPct }));
+  chartInstances.scatterEntry = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Entry VIX vs Return',
+        data: pts,
+        backgroundColor: pts.map(p => p.y >= 0 ? '#00e67688' : '#ff444888'),
+        pointRadius: 5
+      }]
+    },
+    options: {
+      ...chartDefaults(),
+      scales: {
+        x: { title: { display: true, text: 'Entry VIX', font: { size: 10 } }, ticks: { font: { size: 10 } } },
+        y: { title: { display: true, text: 'Return %', font: { size: 10 } }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderScatterDays(trades) {
+  const ctx = document.getElementById('scatterDaysChart').getContext('2d');
+  const pts = trades.map(t => ({ x: t.daysHeld, y: t.returnPct }));
+  chartInstances.scatterDays = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Days Held vs Return',
+        data: pts,
+        backgroundColor: pts.map(p => p.y >= 0 ? '#00d4ff88' : '#ffb30088'),
+        pointRadius: 5
+      }]
+    },
+    options: {
+      ...chartDefaults(),
+      scales: {
+        x: { title: { display: true, text: 'Days Held', font: { size: 10 } }, ticks: { font: { size: 10 } } },
+        y: { title: { display: true, text: 'Return %', font: { size: 10 } }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function chartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: true,
+    animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.formattedValue}` } }
+    },
+    scales: {
+      x: { ticks: { font: { size: 10 } } },
+      y: { ticks: { font: { size: 10 } } }
+    }
+  };
+}
+
+// ══════════════════════════════════════════════════
+//  COMPARISON
+// ══════════════════════════════════════════════════
+const COMPARE_PRESETS = [
+  { label: '40C <15 180d sell30', entryThreshold:15, strike:40, expiration:180, exitVix:30, iv:80, entryRule:'close_below' },
+  { label: '30C <15 180d sell25', entryThreshold:15, strike:30, expiration:180, exitVix:25, iv:80, entryRule:'close_below' },
+  { label: '40C <17 180d sell30', entryThreshold:17, strike:40, expiration:180, exitVix:30, iv:80, entryRule:'close_below' },
+  { label: '30C <17 365d sell25', entryThreshold:17, strike:30, expiration:365, exitVix:25, iv:80, entryRule:'close_below' },
+  { label: '25C <15 90d sell20',  entryThreshold:15, strike:25, expiration:90,  exitVix:20, iv:80, entryRule:'close_below' },
+];
+
+let compareRowIdx = 0;
+function addCompareRow(preset) {
+  const p = preset || { entryThreshold:15, strike:40, expiration:180, exitVix:30, iv:80, entryRule:'close_below', label:'' };
+  const id = compareRowIdx++;
+  compareRows.push({ id });
+  const div = document.createElement('div');
+  div.className = 'compare-row';
+  div.id = `crow-${id}`;
+  div.innerHTML = `
+    <div class="field"><label>Entry VIX &lt;</label>
+      <select id="ce-${id}">
+        ${[13,14,15,16,17].map(v => `<option value="${v}" ${v==p.entryThreshold?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>Strike</label>
+      <select id="cs-${id}">
+        ${[20,25,30,35,40,45].map(v => `<option value="${v}" ${v==p.strike?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>Days to Exp</label>
+      <select id="cd-${id}">
+        ${[30,60,90,120,180,270,365].map(v => `<option value="${v}" ${v==p.expiration?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>Sell VIX ≥</label>
+      <select id="cx-${id}">
+        ${[20,25,30,35,40].map(v => `<option value="${v}" ${v==p.exitVix?'selected':''}>${v}</option>`).join('')}
+        <option value="0">At Expiry</option>
+      </select></div>
+    <button class="btn btn-secondary btn-sm" onclick="removeCompareRow(${id})">✕</button>
+  `;
+  document.getElementById('compareRows').appendChild(div);
+}
+
+function removeCompareRow(id) {
+  const el = document.getElementById(`crow-${id}`);
+  if (el) el.remove();
+  compareRows = compareRows.filter(r => r.id !== id);
+}
+
+function loadPresets() {
+  document.getElementById('compareRows').innerHTML = '';
+  compareRows = [];
+  compareRowIdx = 0;
+  COMPARE_PRESETS.forEach(p => addCompareRow(p));
+}
+
+function runCompare() {
+  if (vixData.length === 0) loadDemoData();
+  const rows = document.querySelectorAll('.compare-row');
+  if (rows.length === 0) { alert('Add at least one strategy row.'); return; }
+
+  const results = [];
+  rows.forEach(row => {
+    const id = row.id.split('-')[1];
+    const entry = parseFloat(document.getElementById(`ce-${id}`).value);
+    const strike = parseFloat(document.getElementById(`cs-${id}`).value);
+    const dte = parseInt(document.getElementById(`cd-${id}`).value);
+    const exitVixVal = parseInt(document.getElementById(`cx-${id}`).value);
+    const settings = {
+      entryThreshold: entry, strike, expiration: dte,
+      exitVix: exitVixVal || null,
+      stopLoss: null, profitTarget: null,
+      entryRule: 'close_below', riskPerTrade: 1000, iv: 80
+    };
+    const trades = backtestEngine(vixData, settings);
+    const s = trades.length ? computeStats(trades, 1000, vixData[0].date, vixData[vixData.length-1].date) : null;
+    results.push({ label: `${strike}C <${entry} ${dte}d exit@${exitVixVal||'exp'}`, trades, s });
+  });
+
+  document.getElementById('compareResults').style.display = 'block';
+  const body = document.getElementById('compareBody');
+  body.innerHTML = results.map((r, i) => {
+    if (!r.s) return `<tr><td>${r.label}</td><td colspan="11" style="color:var(--text3)">No trades</td></tr>`;
+    const s = r.s;
+    const winCls = s.winRate >= 0.5 ? 'positive' : 'negative';
+    const retCls = s.avgReturn >= 0 ? 'positive' : 'negative';
+    const pnlCls = s.totalDollars >= 0 ? 'positive' : 'negative';
+    return `<tr>
+      <td style="color:var(--accent)">${r.label}</td>
+      <td>${s.trades}</td>
+      <td class="${winCls}">${(s.winRate*100).toFixed(1)}%</td>
+      <td class="${retCls}">${s.avgReturn.toFixed(1)}%</td>
+      <td class="${retCls}">${s.medReturn.toFixed(1)}%</td>
+      <td class="positive">${s.bestTrade.toFixed(0)}%</td>
+      <td class="negative">${s.worstTrade.toFixed(0)}%</td>
+      <td class="${s.profitFactor>=1?'positive':'negative'}">${s.profitFactor.toFixed(2)}</td>
+      <td class="${pnlCls}">$${s.totalDollars.toFixed(0)}</td>
+      <td class="${s.cagr>=0?'positive':'negative'}">${s.cagr.toFixed(1)}%</td>
+      <td>${s.hit2x.toFixed(1)}%</td>
+      <td>${s.hit5x.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════
+function mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+function showProgress(show) {
+  document.getElementById('btProgress').style.display = show ? 'block' : 'none';
+}
+function setProgress(pct) {
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ══════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const tabEl = document.querySelector(`.tab[onclick="switchTab('${name}')"]`);
+  if (tabEl) tabEl.classList.add('active');
+  const panel = document.getElementById(`tab-${name}`);
+  if (panel) panel.classList.add('active');
+}
+
+document.getElementById('entryLevel').addEventListener('change', function () {
+  document.getElementById('customEntryField').style.display = this.value === 'custom' ? 'block' : 'none';
+});
+document.getElementById('strike').addEventListener('change', function () {
+  document.getElementById('customStrikeField').style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+document.getElementById('vixUploadZone').addEventListener('click', function () {
+  document.getElementById('vixFile').click();
+});
+
+function showDisclaimer() { document.getElementById('disclaimerModal').classList.add('show'); }
+function hideDisclaimer() { document.getElementById('disclaimerModal').classList.remove('show'); }
+document.getElementById('disclaimerModal').addEventListener('click', function (e) {
+  if (e.target === this) hideDisclaimer();
+});
+
+let sortDir = {};
+function sortTable(col) {
+  const tbody = document.getElementById('tradeBody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const dir = sortDir[col] = !(sortDir[col]);
+  rows.sort((a, b) => {
+    const av = a.cells[col].textContent.replace(/[$%+]/g, '').trim();
+    const bv = b.cells[col].textContent.replace(/[$%+]/g, '').trim();
+    const n = parseFloat(av) - parseFloat(bv);
+    if (!isNaN(n)) return dir ? n : -n;
+    return dir ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// ── Init
+loadDemoData();
+showDisclaimer();
+</script>
+</body>
+</html>
