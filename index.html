@@ -491,14 +491,33 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
             <option value="vix18">Sell when VIX ≥ 18</option>
             <option value="vix20">Sell when VIX ≥ 20</option>
             <option value="vix22">Sell when VIX ≥ 22</option>
-            <option value="vix25">Sell when VIX ≥ 25</option>
+            <option value="vix25" selected>Sell when VIX ≥ 25</option>
             <option value="vix28">Sell when VIX ≥ 28</option>
-            <option value="vix30" selected>Sell when VIX ≥ 30</option>
+            <option value="vix30">Sell when VIX ≥ 30</option>
             <option value="vix35">Sell when VIX ≥ 35</option>
             <option value="vix40">Sell when VIX ≥ 40</option>
             <option value="vix45">Sell when VIX ≥ 45</option>
             <option value="expiry">Hold to Expiration</option>
           </select>
+        </div>
+
+        <div class="field" id="gapWarningField" style="display:none">
+          <div style="background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.4);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--red);line-height:1.6">
+            ⚠ <strong>Overlap Warning:</strong> Entry threshold overlaps exit level. VIX can enter and exit on consecutive days, inflating returns. Increase the gap or lower the entry threshold.
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Min Entry→Exit Gap (VIX pts)</label>
+          <select id="minGap">
+            <option value="0">0 pts — no restriction</option>
+            <option value="1">1 pt minimum gap</option>
+            <option value="2" selected>2 pts minimum gap ← recommended</option>
+            <option value="3">3 pts minimum gap</option>
+            <option value="4">4 pts minimum gap</option>
+            <option value="5">5 pts minimum gap</option>
+          </select>
+          <span style="font-size:10px;color:var(--text3)">Requires entry VIX to be at least this many pts below the exit level. Prevents same-day or 1-day flip trades.</span>
         </div>
 
         <div class="field">
@@ -1022,6 +1041,11 @@ function getSettings() {
   const profitTarget   = profitTargetRaw === 'none' ? null : parseFloat(profitTargetRaw);
   const entryRule      = document.getElementById('entryRule').value;
   const riskPerTrade   = parseFloat(document.getElementById('riskPerTrade').value) || 1000;
+  const minGapPts      = parseFloat(document.getElementById('minGap').value) || 0;
+
+  // Show/hide overlap warning
+  const hasOverlap = exitVix !== null && entryThreshold > exitVix - minGapPts;
+  document.getElementById('gapWarningField').style.display = hasOverlap ? 'block' : 'none';
 
   // Realistic pricing params
   const futuresBasis = parseFloat(document.getElementById('futuresBasis').value) || 4;
@@ -1031,16 +1055,20 @@ function getSettings() {
   const ivExit       = parseFloat(document.getElementById('ivExit').value) || 150;
 
   return { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget,
-           entryRule, riskPerTrade, futuresBasis, askSpread, bidSpread, ivEntry, ivExit };
+           entryRule, riskPerTrade, futuresBasis, askSpread, bidSpread, ivEntry, ivExit, minGapPts };
 }
 
 function backtestEngine(data, settings) {
   const { entryThreshold, strike, expiration, exitVix, stopLoss, profitTarget,
-          entryRule, riskPerTrade, futuresBasis, askSpread, bidSpread, ivEntry, ivExit } = settings;
+          entryRule, riskPerTrade, futuresBasis, askSpread, bidSpread, ivEntry, ivExit, minGapPts = 2 } = settings;
+
+  // Effective entry ceiling: entry VIX must be below (exitVix - minGapPts)
+  // This prevents overlap-zone 1-day flip trades
+  const effectiveEntryCeiling = exitVix !== null ? Math.min(entryThreshold, exitVix - minGapPts) : entryThreshold;
 
   const trades = [];
   let inTrade = false, trade = null;
-  const MIN_DAYS_BETWEEN = 5;
+  const MIN_DAYS_BETWEEN = 1;  // cooldown after exit before re-entering (days)
   let lastExitIdx = -999;
 
   for (let i = 1; i < data.length; i++) {
@@ -1107,11 +1135,11 @@ function backtestEngine(data, settings) {
     if (i - lastExitIdx < MIN_DAYS_BETWEEN) continue;
 
     let signal = false;
-    if      (entryRule === 'close_below') signal = row.close < entryThreshold;
-    else if (entryRule === 'turn_up')     signal = prev.close < entryThreshold && row.close > prev.close;
+    if      (entryRule === 'close_below') signal = row.close < effectiveEntryCeiling;
+    else if (entryRule === 'turn_up')     signal = prev.close < effectiveEntryCeiling && row.close > prev.close;
     else if (entryRule === 'weekly') {
       const dow = new Date(row.date).getDay();
-      signal = row.close < entryThreshold && dow === 1;
+      signal = row.close < effectiveEntryCeiling && dow === 1;
     }
 
     if (signal) {
@@ -1243,9 +1271,17 @@ function renderResults(trades, settings) {
     ${statCard('Entry Threshold', '< ' + settings.entryThreshold, 'accent')}
   `;
 
+  const effectiveCeiling = settings.exitVix !== null
+    ? Math.min(settings.entryThreshold, settings.exitVix - (settings.minGapPts || 0))
+    : settings.entryThreshold;
+  const gapNote = settings.minGapPts > 0 && effectiveCeiling < settings.entryThreshold
+    ? ` <span style="color:var(--red)">(gap enforced: effective entry ceiling = ${effectiveCeiling})</span>`
+    : '';
+
   document.getElementById('resultsNote').innerHTML = `
-    <strong>Strategy:</strong> VIX ${settings.entryRule.replace(/_/g,' ')} below ${settings.entryThreshold} → Buy ${settings.strike} Call, ${settings.expiration} DTE |
+    <strong>Strategy:</strong> VIX ${settings.entryRule.replace(/_/g,' ')} below ${settings.entryThreshold}${gapNote} → Buy ${settings.strike} Call, ${settings.expiration} DTE |
     Exit: ${document.getElementById('exitRule').options[document.getElementById('exitRule').selectedIndex].text} |
+    Gap: ${settings.minGapPts}pt |
     Risk: $${settings.riskPerTrade}/trade |
     <span style="color:var(--accent2)">Fwd basis: +${settings.futuresBasis}pts</span> |
     <span style="color:var(--amber)">Entry IV: ${settings.ivEntry}% ask+${settings.askSpread}%spread</span> |
@@ -1514,11 +1550,11 @@ function chartDefaults() {
 //  COMPARISON
 // ══════════════════════════════════════════════════
 const COMPARE_PRESETS = [
-  { label: '30C <18 150d sell25 SL50', entryThreshold:18, strike:30, expiration:150, exitVix:25, iv:80, entryRule:'close_below' },
-  { label: '30C <17 150d sell25 SL50', entryThreshold:17, strike:30, expiration:150, exitVix:25, iv:80, entryRule:'close_below' },
-  { label: '30C <18 90d sell25',       entryThreshold:18, strike:30, expiration:90,  exitVix:25, iv:80, entryRule:'close_below' },
-  { label: '55C <20 180d sell35',      entryThreshold:20, strike:55, expiration:180, exitVix:35, iv:80, entryRule:'close_below' },
-  { label: '40C <15 120d sell35',      entryThreshold:15, strike:40, expiration:120, exitVix:35, iv:80, entryRule:'close_below' },
+  { label: '55C <17 120d sell@20 (2pt gap)', entryThreshold:17, strike:55, expiration:120, exitVix:20, iv:85, entryRule:'close_below' },
+  { label: '60C <17 120d sell@20 (2pt gap)', entryThreshold:17, strike:60, expiration:120, exitVix:20, iv:85, entryRule:'close_below' },
+  { label: '55C <18 90d  sell@22 (4pt gap)', entryThreshold:18, strike:55, expiration:90,  exitVix:22, iv:85, entryRule:'close_below' },
+  { label: '55C <15 90d  sell@20 (5pt gap)', entryThreshold:15, strike:55, expiration:90,  exitVix:20, iv:85, entryRule:'close_below' },
+  { label: '40C <15 120d sell@25 (10pt gap)',entryThreshold:15, strike:40, expiration:120, exitVix:25, iv:85, entryRule:'close_below' },
 ];
 
 let compareRowIdx = 0;
@@ -1582,6 +1618,7 @@ function runCompare() {
       exitVix: exitVixVal || null,
       stopLoss: null, profitTarget: null,
       entryRule: 'close_below', riskPerTrade: 1000,
+      minGapPts: parseFloat(document.getElementById('minGap').value) || 2,
       // inherit realistic pricing from the sidebar sliders
       futuresBasis: parseFloat(document.getElementById('futuresBasis').value) || 4,
       askSpread:    parseFloat(document.getElementById('askSpread').value) || 50,
@@ -1659,7 +1696,22 @@ function switchTab(name) {
 
 document.getElementById('entryLevel').addEventListener('change', function () {
   document.getElementById('customEntryField').style.display = this.value === 'custom' ? 'block' : 'none';
+  updateGapWarning();
 });
+document.getElementById('exitRule').addEventListener('change', updateGapWarning);
+document.getElementById('minGap').addEventListener('change', updateGapWarning);
+
+function updateGapWarning() {
+  const entryVal = document.getElementById('entryLevel').value;
+  const entryThreshold = entryVal === 'custom'
+    ? parseFloat(document.getElementById('customEntry').value)
+    : parseFloat(entryVal);
+  const exitRuleRaw = document.getElementById('exitRule').value;
+  const exitVix = exitRuleRaw.startsWith('vix') ? parseInt(exitRuleRaw.slice(3)) : null;
+  const minGapPts = parseFloat(document.getElementById('minGap').value) || 0;
+  const hasOverlap = exitVix !== null && entryThreshold > exitVix - minGapPts;
+  document.getElementById('gapWarningField').style.display = hasOverlap ? 'block' : 'none';
+}
 document.getElementById('strike').addEventListener('change', function () {
   document.getElementById('customStrikeField').style.display = this.value === 'custom' ? 'block' : 'none';
 });
