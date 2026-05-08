@@ -548,65 +548,69 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
 
         <!-- ── REALISTIC PRICING PANEL ── -->
         <div style="border-top:1px solid var(--border);margin:4px 0;padding-top:10px">
-          <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:8px">⚡ Realistic Pricing</div>
-
-          <div class="field">
-            <label>VIX Futures Basis (pts above spot)</label>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="futuresBasis" min="0" max="10" step="0.5" value="4"
-                style="flex:1;accent-color:var(--accent)" oninput="document.getElementById('futuresBasisVal').textContent=this.value">
-              <span id="futuresBasisVal" style="color:var(--accent);font-size:12px;min-width:28px">4.0</span>
-            </div>
-            <span style="font-size:10px;color:var(--text3)">VIX futures trade ~3–6pts above spot in contango. Options price off futures, not spot.</span>
+          <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:4px">⚡ Pricing Model</div>
+          <div class="note" style="font-size:10px;margin-bottom:8px;padding:8px">
+            <strong style="color:var(--green)">✓ Calibrated to real TOS chains</strong><br>
+            Forward & IV pulled from 5 live expirations (Jun–Dec 2026). Key finding: Oct/Aug futures trade <strong>~3pts BELOW spot</strong> due to mean-reversion pricing. Sliders below are adjustments on top of calibration.
           </div>
 
           <div class="field">
-            <label>Entry: Buy at Ask (spread % of mid)</label>
+            <label>Basis Adjustment (pts, on top of calibrated)</label>
             <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="askSpread" min="0" max="100" step="5" value="50"
-                style="flex:1;accent-color:var(--green)" oninput="document.getElementById('askSpreadVal').textContent=this.value+'%'">
-              <span id="askSpreadVal" style="color:var(--green);font-size:12px;min-width:34px">50%</span>
+              <input type="range" id="futuresBasis" min="-3" max="5" step="0.5" value="0"
+                style="flex:1;accent-color:var(--accent)" oninput="document.getElementById('futuresBasisVal').textContent=(this.value>=0?'+':'')+this.value">
+              <span id="futuresBasisVal" style="color:var(--accent);font-size:12px;min-width:34px">+0</span>
             </div>
-            <span style="font-size:10px;color:var(--text3)">You buy at ask = mid + (spread/2). Deep OTM VIX calls typically have 40–80% spreads.</span>
+            <span style="font-size:10px;color:var(--text3)">0 = use calibrated forward exactly. +/- to stress-test.</span>
           </div>
 
           <div class="field">
-            <label>Exit: Sell at Bid (spread % of mid)</label>
+            <label>Spread Multiplier (1x = calibrated real spreads)</label>
             <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="bidSpread" min="0" max="100" step="5" value="50"
-                style="flex:1;accent-color:var(--red)" oninput="document.getElementById('bidSpreadVal').textContent=this.value+'%'">
-              <span id="bidSpreadVal" style="color:var(--red);font-size:12px;min-width:34px">50%</span>
+              <input type="range" id="askSpread" min="10" max="150" step="5" value="50"
+                style="flex:1;accent-color:var(--green)" oninput="document.getElementById('askSpreadVal').textContent=this.value">
+              <span id="askSpreadVal" style="color:var(--green);font-size:12px;min-width:34px">50</span>
             </div>
-            <span style="font-size:10px;color:var(--text3)">You sell at bid = mid − (spread/2). During spikes spreads often widen to 60–100%.</span>
+            <span style="font-size:10px;color:var(--text3)">50 = real calibrated spread (8% near-term, 28% long-dated). 100 = 2× wider.</span>
           </div>
 
           <div class="field">
-            <label>Implied Volatility — Entry (%)</label>
+            <label>Exit Spread Multiplier</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="bidSpread" min="10" max="150" step="5" value="50"
+                style="flex:1;accent-color:var(--red)" oninput="document.getElementById('bidSpreadVal').textContent=this.value">
+              <span id="bidSpreadVal" style="color:var(--red);font-size:12px;min-width:34px">50</span>
+            </div>
+            <span style="font-size:10px;color:var(--text3)">Spreads widen 1.5× automatically during spikes. 50 = normal, 100 = stressed.</span>
+          </div>
+
+          <div class="field">
+            <label>IV Adjustment — Entry (% of calibrated)</label>
             <div style="display:flex;align-items:center;gap:8px">
               <input type="range" id="ivEntry" min="40" max="200" step="5" value="85"
                 style="flex:1;accent-color:var(--purple)" oninput="document.getElementById('ivEntryVal').textContent=this.value+'%'">
               <span id="ivEntryVal" style="color:var(--purple);font-size:12px;min-width:34px">85%</span>
             </div>
-            <span style="font-size:10px;color:var(--text3)">IV when buying. Deep OTM VIX calls typically 70–120% IV at entry.</span>
+            <span style="font-size:10px;color:var(--text3)">85% = use calibrated IV as-is (real: 120–230% by DTE). 100% = scale up.</span>
           </div>
 
           <div class="field">
-            <label>Implied Volatility — Exit spike (%)</label>
+            <label>IV Adjustment — Exit Spike (%)</label>
             <div style="display:flex;align-items:center;gap:8px">
               <input type="range" id="ivExit" min="60" max="300" step="5" value="150"
                 style="flex:1;accent-color:var(--amber)" oninput="document.getElementById('ivExitVal').textContent=this.value+'%'">
               <span id="ivExitVal" style="color:var(--amber);font-size:12px;min-width:34px">150%</span>
             </div>
-            <span style="font-size:10px;color:var(--text3)">IV during a VIX spike (when selling). Typically 120–250% during panic.</span>
+            <span style="font-size:10px;color:var(--text3)">IV rises automatically with spike magnitude. 150% = normal spike behaviour.</span>
           </div>
 
           <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('calibrated')">Calibrated</button>
             <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('optimistic')">Optimistic</button>
-            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('realistic')">Realistic</button>
             <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px" onclick="setPricingPreset('conservative')">Conservative</button>
           </div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5">
-            Optimistic: no basis, tight spreads &nbsp;|&nbsp; Realistic: 4pt basis, 50% spread &nbsp;|&nbsp; Conservative: 6pt basis, 80% spread
+            Calibrated = real market data, no adjustments &nbsp;|&nbsp; Optimistic = tighter spreads &nbsp;|&nbsp; Conservative = wider spreads, higher IV
           </div>
         </div>
 
@@ -942,57 +946,158 @@ function normCDF(x) {
   return 0.5 * (1 + sign * (1 - 2 * (1-y)));
 }
 
-function bsCallPrice(S, K, T, r, sigma) {
-  if (T <= 0) return Math.max(0, S - K);
+function bsCallPrice(F, K, T, sigma) {
+  // Prices off FORWARD F directly (not spot), no r adjustment needed
+  if (T <= 0) return Math.max(0, F - K);
   const sqrtT = Math.sqrt(T);
-  const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
+  const d1 = (Math.log(F / K) + 0.5 * sigma * sigma * T) / (sigma * sqrtT);
   const d2 = d1 - sigma * sqrtT;
-  return S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2);
+  return Math.max(0, F * normCDF(d1) - K * Math.exp(-0.05 * T) * normCDF(d2));
 }
 
-// ── Realistic option pricing ───────────────────────────────────────────────
-// Returns { mid, ask, bid, futuresLevel }
-// futuresBasis: VIX futures premium over spot (contango, typically 3–6pts)
-// askSpreadPct / bidSpreadPct: half-spread as % of mid (e.g. 50 = ±25% of mid)
-function realisticOptionPrice(spotVix, strike, daysToExpiry, iv, futuresBasis, askSpreadPct, bidSpreadPct) {
-  // Price off the futures level, not spot
-  const F = spotVix + futuresBasis;
+// ── CALIBRATED TERM STRUCTURE from real TOS chains (VIX ~17, May 2026) ────
+// Source: 5 real daytime option chains, calibrated via BS fit
+// Key finding: VIX futures trade BELOW spot for mid/long dated contracts
+// because market prices mean-reversion of VIX back toward 15–16
+//
+//  DTE   Forward   Basis vs spot   IV
+//   39    $14.00      -3.2 pts     230%   (Jun 17)
+//  102    $14.25      -3.0 pts     176%   (Aug 19)
+//  130    $14.00      -3.2 pts     166%   (Sep 16)
+//  193    $15.75      -1.5 pts     126%   (Nov 18)
+//  221    $15.50      -1.7 pts     120%   (Dec 16)
+//
+// Real spreads (bid/ask as % of mid, liquid strikes 25–50):
+//   39 DTE:  avg 8%   (very tight — near-term monthlies)
+//  102 DTE:  avg 5%   (tightest — most liquid expiry)
+//  130 DTE:  avg 6%
+//  193 DTE:  avg 16%
+//  221 DTE:  avg 28%
+
+function calibratedForward(spotVix, dte) {
+  // Interpolate forward from real calibration table
+  // Below DTE 39: near-term weeklies have F ABOVE spot (near-term vol premium)
+  // Above DTE 39: F drifts below spot as mean-reversion priced in
+  const table = [
+    {dte:7,   basisPct:-0.10}, // very near term: F ≈ spot
+    {dte:14,  basisPct:-0.05},
+    {dte:29,  basisPct: 0.16}, // Jun 2 weekly: F = +2.8pts above spot
+    {dte:39,  basisPct:-0.19}, // Jun 17: F = -3.2pts (basis as fraction of spot)
+    {dte:102, basisPct:-0.17}, // Aug 19
+    {dte:130, basisPct:-0.19}, // Sep 16
+    {dte:193, basisPct:-0.09}, // Nov 18
+    {dte:221, basisPct:-0.10}, // Dec 16
+    {dte:365, basisPct:-0.12}, // extrapolate
+  ];
+  // Find surrounding points and interpolate
+  let lo = table[0], hi = table[table.length-1];
+  for (let i = 0; i < table.length - 1; i++) {
+    if (dte >= table[i].dte && dte <= table[i+1].dte) {
+      lo = table[i]; hi = table[i+1]; break;
+    }
+  }
+  const t = lo.dte === hi.dte ? 0 : (dte - lo.dte) / (hi.dte - lo.dte);
+  const basisPct = lo.basisPct + t * (hi.basisPct - lo.basisPct);
+  return +(spotVix * (1 + basisPct)).toFixed(3);
+}
+
+function calibratedIV(dte) {
+  // IV term structure from real chains — higher IV at shorter DTE (vol of vol effect)
+  if (dte <= 14)  return 2.50;
+  if (dte <= 29)  return 2.20;
+  if (dte <= 39)  return 2.30;
+  if (dte <= 60)  return 2.00;
+  if (dte <= 102) return 1.76;
+  if (dte <= 130) return 1.66;
+  if (dte <= 193) return 1.26;
+  if (dte <= 221) return 1.20;
+  return 1.10; // longer dated
+}
+
+function calibratedSpreadPct(dte) {
+  // Real bid/ask spread as % of mid from actual TOS chains (daytime, liquid)
+  // Jun17 39DTE:  8% — near-term monthlies very tight
+  // Aug19 102DTE: 5% — most liquid, tightest
+  // Sep16 130DTE: 6%
+  // Nov18 193DTE: 16%
+  // Dec16 221DTE: 28%
+  // Oct21 170DTE: ~55% (unusually wide — less liquid mid-curve expiry)
+  if (dte <= 39)  return 0.08;
+  if (dte <= 102) return 0.05;
+  if (dte <= 130) return 0.06;
+  if (dte <= 160) return 0.55; // Oct-style wide spread
+  if (dte <= 193) return 0.16;
+  return 0.28;
+}
+
+// ── Main entry pricing function ────────────────────────────────────────────
+// Returns { mid, ask, bid, futuresLevel, iv, spreadPct }
+// Uses calibrated term structure UNLESS user has overridden via sliders
+function realisticOptionPrice(spotVix, strike, daysToExpiry, ivOverride, basisOverride, askSpreadPct, bidSpreadPct) {
+  // Use calibrated values as base, blend with user overrides
+  const F_cal  = calibratedForward(spotVix, daysToExpiry);
+  const iv_cal = calibratedIV(daysToExpiry);
+  const sp_cal = calibratedSpreadPct(daysToExpiry);
+
+  // basisOverride from slider: 0 = pure calibrated, non-zero = user-adjusted
+  // We treat the slider as an ADDITIVE adjustment on top of calibrated basis
+  const F = +(F_cal + basisOverride).toFixed(3);
+
+  // IV: blend calibrated with user slider (ivOverride is the slider value in %)
+  // Use calibrated as default; if user has adjusted slider away from default (85),
+  // blend proportionally
+  const ivUser  = ivOverride / 100;
+  const ivBlend = iv_cal * (ivUser / (85/100)); // scale by user adjustment ratio
+  const sigma   = Math.min(3.0, Math.max(0.50, ivBlend));
+
   const T = Math.max(1, daysToExpiry) / 365;
-  const r = 0.05;
-  const sigma = iv / 100;
+  const midRaw = bsCallPrice(F, strike, T, sigma);
+  const mid    = Math.max(0.05, midRaw);
 
-  const mid = bsCallPrice(F, strike, T, r, sigma);
+  // Spread: use calibrated spread as base, scale by user askSpread/bidSpread sliders
+  // User sliders are in % (default 50 = 50% half-spread of mid)
+  // Real market: spread is 5-28% of mid total (not half)
+  // Map: user slider 50% → use calibrated spread, scaled
+  const spreadScale = askSpreadPct / 50; // 1.0 at default, 2.0 at max
+  const halfSpread  = mid * sp_cal * spreadScale * 0.5;
 
-  // Minimum real-world quote floor: ~$0.05 bid, $0.10 ask on deep OTM
-  const minMid = 0.075;
-  const effMid = Math.max(minMid, mid);
+  const ask = +(mid + halfSpread).toFixed(3);
+  const bid = Math.max(0.01, +(mid - halfSpread).toFixed(3));
 
-  // Ask = mid + half-spread; Bid = mid - half-spread
-  // Spread widens as option goes deeper OTM (moneyness factor)
-  const moneyness = F / strike; // <1 = OTM
-  const otmFactor = Math.max(1, Math.pow(1 / moneyness, 1.5)); // deeper OTM = wider spread
-  const halfAskSpread = effMid * (askSpreadPct / 100) * 0.5 * otmFactor;
-  const halfBidSpread = effMid * (bidSpreadPct / 100) * 0.5 * otmFactor;
-
-  const ask = +(effMid + halfAskSpread).toFixed(3);
-  const bid = Math.max(0.01, +(effMid - halfBidSpread).toFixed(3));
-
-  return { mid: +effMid.toFixed(3), ask, bid, futuresLevel: +F.toFixed(2) };
+  return {
+    mid: +mid.toFixed(3), ask, bid,
+    futuresLevel: +F.toFixed(2),
+    impliedIV: +(sigma * 100).toFixed(0),
+    spreadPct: +(sp_cal * 100).toFixed(0)
+  };
 }
 
-// ── During a spike: IV expands and spread widens ───────────────────────────
-function exitOptionPrice(spotVix, strike, daysToExpiry, ivExit, bidSpreadPct, futuresBasis) {
-  // During a spike the futures basis collapses — VIX spot surges to/past futures
-  // Use reduced basis (spike compresses contango, sometimes inverts)
-  const spikeBasis = Math.min(futuresBasis, Math.max(0, futuresBasis - (spotVix - 20) * 0.3));
-  const F = spotVix + spikeBasis;
-  const T = Math.max(0.5, daysToExpiry) / 365;
-  const sigma = ivExit / 100;
-  const mid = bsCallPrice(F, strike, T, 0.05, sigma);
+// ── Spike exit pricing ─────────────────────────────────────────────────────
+// During a spike: near-term futures SURGE above spot (backwardation flips)
+// Long-dated futures move less — typically 50-70% of spot move
+function exitOptionPrice(spotVix, strike, daysToExpiry, ivExitOverride, bidSpreadPct, basisOverride) {
+  // Spike forward: near-term converges to/above spot, long-term moves 50-65% of spike
+  const baseF  = calibratedForward(20, daysToExpiry); // baseline at VIX=20
+  const spikeMove = spotVix - 20;
+  // Near-term moves almost 1:1, long-term moves ~55%
+  const dteFactor = Math.max(0.45, Math.min(0.95, 1 - daysToExpiry / 600));
+  const F = Math.max(spotVix * 0.5, +(baseF + spikeMove * dteFactor + basisOverride).toFixed(3));
 
-  // Spreads widen during spikes — use bidSpread * 1.5 for exit
-  const halfBid = mid * (bidSpreadPct / 100) * 0.75;
-  const bid = Math.max(0.01, +(mid - halfBid).toFixed(3));
+  // IV rises sharply during spike — scale calibrated IV up
+  const baseIV = calibratedIV(daysToExpiry);
+  const ivSpike = baseIV * Math.max(1.0, Math.min(2.5, 1 + (spotVix - 20) / 25));
+  const ivUser = ivExitOverride / 100;
+  const sigma  = Math.min(3.5, ivSpike * (ivUser / (150/100)));
+
+  const T   = Math.max(0.5, daysToExpiry) / 365;
+  const mid = bsCallPrice(F, strike, T, sigma);
+
+  // Spreads widen during spikes — use 1.5× normal spread
+  const spBase   = calibratedSpreadPct(daysToExpiry) * 1.5;
+  const spScale  = bidSpreadPct / 50;
+  const halfBid  = mid * spBase * spScale * 0.5;
+  const bid      = Math.max(0.01, +(mid - halfBid).toFixed(3));
+
   return { mid: +mid.toFixed(3), bid, futuresLevel: +F.toFixed(2) };
 }
 
@@ -1001,17 +1106,17 @@ function exitOptionPrice(spotVix, strike, daysToExpiry, ivExit, bidSpreadPct, fu
 // ══════════════════════════════════════════════════
 function setPricingPreset(mode) {
   const presets = {
-    optimistic:   { basis: 0,   ask: 20,  bid: 20,  ivEntry: 70,  ivExit: 120 },
-    realistic:    { basis: 4,   ask: 50,  bid: 50,  ivEntry: 85,  ivExit: 150 },
-    conservative: { basis: 6,   ask: 80,  bid: 80,  ivEntry: 100, ivExit: 200 },
+    calibrated:   { basis: 0,   ask: 50,  bid: 50,  ivEntry: 85,  ivExit: 150 },
+    optimistic:   { basis: 1,   ask: 25,  bid: 25,  ivEntry: 70,  ivExit: 120 },
+    conservative: { basis:-1,   ask: 100, bid: 100, ivEntry: 110, ivExit: 200 },
   };
-  const p = presets[mode];
+  const p = presets[mode] || presets.calibrated;
   document.getElementById('futuresBasis').value = p.basis;
-  document.getElementById('futuresBasisVal').textContent = p.basis;
+  document.getElementById('futuresBasisVal').textContent = (p.basis >= 0 ? '+' : '') + p.basis;
   document.getElementById('askSpread').value = p.ask;
-  document.getElementById('askSpreadVal').textContent = p.ask + '%';
+  document.getElementById('askSpreadVal').textContent = p.ask;
   document.getElementById('bidSpread').value = p.bid;
-  document.getElementById('bidSpreadVal').textContent = p.bid + '%';
+  document.getElementById('bidSpreadVal').textContent = p.bid;
   document.getElementById('ivEntry').value = p.ivEntry;
   document.getElementById('ivEntryVal').textContent = p.ivEntry + '%';
   document.getElementById('ivExit').value = p.ivExit;
