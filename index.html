@@ -749,6 +749,7 @@ tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
                 <th>Best</th>
                 <th>Worst</th>
                 <th>Profit Factor</th>
+                <th>Capital/yr</th>
                 <th>Total P&L</th>
                 <th>CAGR</th>
                 <th>2x Hit%</th>
@@ -1317,6 +1318,19 @@ function computeStats(trades, riskPerTrade, startDate, endDate) {
   const totalCapital = riskPerTrade * trades.length;
   const cagr = years > 0 ? (Math.pow(Math.max(0.01, (totalCapital + totalDollars) / totalCapital), 1 / years) - 1) * 100 : 0;
 
+  // P&L per year
+  const pnlPerYear = years > 0 ? totalDollars / years : 0;
+
+  // Capital at risk per year
+  // = trades per year × actual premium paid per trade (entryAsk × 100 multiplier)
+  // entryAsk is stored on each trade; use average
+  const tradesPerYear = years > 0 ? trades.length / years : 0;
+  const avgAsk = mean(trades.map(t => t.entryPrice || t.entryAsk || riskPerTrade * 0.001));
+  // entryPrice/entryAsk is the per-option cost; 1 contract = 100 shares
+  // but riskPerTrade is the fixed $ risk the user set — use that as the base
+  // Capital at risk per year = avg trades/yr × riskPerTrade (max loss per trade)
+  const capitalAtRiskPerYear = tradesPerYear * riskPerTrade;
+
   // Max drawdown on equity curve
   let equity = 0, peak = 0, maxDD = 0;
   for (const t of trades) {
@@ -1334,6 +1348,7 @@ function computeStats(trades, riskPerTrade, startDate, endDate) {
   return {
     trades: trades.length, winRate, avgReturn, medReturn, bestTrade, worstTrade,
     totalDollars, profitFactor, avgDays, cagr, maxDD: maxDD * 100,
+    pnlPerYear, tradesPerYear, capitalAtRiskPerYear,
     hit2x, hit3x, hit5x, hit10x, grossProfit, grossLoss
   };
 }
@@ -1366,14 +1381,14 @@ function renderResults(trades, settings) {
   `;
 
   g2.innerHTML = `
+    ${statCard('Capital at Risk/yr', '$' + s.capitalAtRiskPerYear.toFixed(0), 'amber')}
+    ${statCard('P&L / Year', '$' + s.pnlPerYear.toFixed(0), s.pnlPerYear >= 0 ? 'green' : 'red')}
     ${statCard('Profit Factor', s.profitFactor.toFixed(2), s.profitFactor >= 1 ? 'green' : 'red')}
     ${statCard('Total P&L', '$' + s.totalDollars.toFixed(0), s.totalDollars >= 0 ? 'green' : 'red')}
     ${statCard('CAGR', s.cagr.toFixed(1) + '%', s.cagr >= 0 ? 'green' : 'red')}
     ${statCard('Hit 2x+', s.hit2x.toFixed(1) + '%', 'purple')}
-    ${statCard('Hit 3x+', s.hit3x.toFixed(1) + '%', 'purple')}
     ${statCard('Hit 5x+', s.hit5x.toFixed(1) + '%', 'purple')}
     ${statCard('Hit 10x+', s.hit10x.toFixed(1) + '%', 'purple')}
-    ${statCard('Entry Threshold', '< ' + settings.entryThreshold, 'accent')}
   `;
 
   const effectiveCeiling = settings.exitVix !== null
@@ -1739,7 +1754,7 @@ function runCompare() {
   document.getElementById('compareResults').style.display = 'block';
   const body = document.getElementById('compareBody');
   body.innerHTML = results.map((r, i) => {
-    if (!r.s) return `<tr><td>${r.label}</td><td colspan="11" style="color:var(--text3)">No trades</td></tr>`;
+    if (!r.s) return `<tr><td>${r.label}</td><td colspan="12" style="color:var(--text3)">No trades</td></tr>`;
     const s = r.s;
     const winCls = s.winRate >= 0.5 ? 'positive' : 'negative';
     const retCls = s.avgReturn >= 0 ? 'positive' : 'negative';
@@ -1753,6 +1768,7 @@ function runCompare() {
       <td class="positive">${s.bestTrade.toFixed(0)}%</td>
       <td class="negative">${s.worstTrade.toFixed(0)}%</td>
       <td class="${s.profitFactor>=1?'positive':'negative'}">${s.profitFactor.toFixed(2)}</td>
+      <td style="color:var(--amber)">$${s.capitalAtRiskPerYear.toFixed(0)}</td>
       <td class="${pnlCls}">$${s.totalDollars.toFixed(0)}</td>
       <td class="${s.cagr>=0?'positive':'negative'}">${s.cagr.toFixed(1)}%</td>
       <td>${s.hit2x.toFixed(1)}%</td>
